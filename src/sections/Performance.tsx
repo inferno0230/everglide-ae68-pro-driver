@@ -25,10 +25,25 @@ import {
 } from "@/components/ui";
 import { capLabel } from "@/hid/keycodes";
 import type { Performance as PerfRecord } from "@/hid/protocol/performance";
-import { cn, mm } from "@/lib/utils";
+import { cn, mm, mmTrim } from "@/lib/utils";
 
 /** The board's usable travel. Reads are clamped to this for display. */
 const MAX_TRAVEL_UM = 4000;
+
+/**
+ * The travel step, in micrometres.
+ *
+ * The wire carries micrometres, so one micrometre — 0.001 mm — is the board's
+ * own resolution, and the official driver steps every travel field by it: the
+ * actuation point as much as rapid trigger and the dead zones. Holding a
+ * coarser step anywhere would round a value set there into a different one
+ * here, so all of them step in micrometres and print what they hold.
+ */
+const TRAVEL_STEP = 1;
+
+/** Rapid trigger measures movement, so it needs some to work with. */
+const RT_FLOOR = 10;
+
 const POLL_HZ = 20;
 
 export function PerformanceSection() {
@@ -108,8 +123,8 @@ export function PerformanceSection() {
         ...(clamped.has(key.id) ? { mark: "clamped" as const } : {}),
         ...(showValues && hasDeadZone
           ? {
-              topLeft: mm(config.pressDead),
-              bottomLeft: mm(config.releaseDead),
+              topLeft: mmTrim(config.pressDead),
+              bottomLeft: mmTrim(config.releaseDead),
             }
           : {}),
         ...(showValues && config?.mode === 1 ? { bottomRight: "RT" } : {}),
@@ -251,10 +266,10 @@ function PerformanceKeyGuide() {
         aria-hidden
       >
         <span className="absolute top-1.5 left-1.5 text-[10px] font-normal text-fg-subtle">
-          0.10
+          0.1
         </span>
         <span className="absolute bottom-1.5 left-1.5 text-[10px] font-normal text-fg-subtle">
-          0.20
+          0.2
         </span>
         <span className="absolute right-1.5 bottom-1.5 text-[10px] font-semibold text-accent">
           RT
@@ -363,7 +378,6 @@ function Editor({
 
   if (!record) return null;
   const rapid = record.mode === 1;
-  const step = 10;
 
   return (
     <Panel>
@@ -417,7 +431,7 @@ function Editor({
                   value={record.rtFirst}
                   min={50}
                   max={MAX_TRAVEL_UM}
-                  step={step}
+                  step={TRAVEL_STEP}
                   revision={revision}
                   clamped={clamped}
                   disabled={busy}
@@ -427,9 +441,9 @@ function Editor({
                   label="Press sensitivity"
                   hint="Downward movement needed to re-trigger."
                   value={record.rtPress}
-                  min={step}
+                  min={RT_FLOOR}
                   max={1000}
-                  step={step}
+                  step={TRAVEL_STEP}
                   revision={revision}
                   clamped={clamped}
                   disabled={busy}
@@ -439,9 +453,9 @@ function Editor({
                   label="Release sensitivity"
                   hint="Upward movement needed to release."
                   value={record.rtRelease}
-                  min={step}
+                  min={RT_FLOOR}
                   max={1000}
-                  step={step}
+                  step={TRAVEL_STEP}
                   revision={revision}
                   clamped={clamped}
                   disabled={busy}
@@ -455,7 +469,7 @@ function Editor({
                 value={record.press}
                 min={100}
                 max={MAX_TRAVEL_UM}
-                step={step}
+                step={TRAVEL_STEP}
                 revision={revision}
                 clamped={clamped}
                 disabled={busy}
@@ -472,7 +486,7 @@ function Editor({
             value={record.pressDead}
             min={0}
             max={1000}
-            step={step}
+            step={TRAVEL_STEP}
             revision={revision}
             clamped={clamped}
             disabled={busy}
@@ -485,7 +499,7 @@ function Editor({
             value={record.releaseDead}
             min={0}
             max={1000}
-            step={step}
+            step={TRAVEL_STEP}
             revision={revision}
             clamped={clamped}
             disabled={busy}
@@ -524,7 +538,15 @@ function TravelControl({
   // device on release — every write is a round trip to the board.
   const { draft, drag, commit } = useSliderDraft(onCommit);
   const shown = draft ?? value;
+
+  // While the field is being typed into, the text belongs to the user. A
+  // number input hands back "" for a half-written "0.2", so reformatting on
+  // every keystroke swallows the decimal point and micrometre precision can
+  // only be reached by dragging. Hold the raw string until focus leaves.
+  const [typed, setTyped] = React.useState<string | null>(null);
+  const text = typed ?? (shown === undefined ? "" : mmTrim(shown));
   const commitDraft = () => {
+    setTyped(null);
     if (draft !== null) commit(draft);
   };
 
@@ -551,19 +573,26 @@ function TravelControl({
             tone={clamped ? "danger" : "accent"}
             className="shrink-0"
           >
-            <span className="relative block w-20">
+            {/* The number and its unit are one centred group, not a number
+                pinned to an edge: "0.2" and "0.271" are different widths, and
+                right-aligning them against a fixed unit leaves the short one
+                adrift in the box. The field grows to its content — `size` is
+                the fallback where `field-sizing` is missing — so the pair
+                stays centred whatever the value holds. */}
+            <label className="flex h-7 w-24 items-center justify-center gap-1 rounded-md bg-canvas-overlay px-2 ring-1 ring-inset ring-line transition-shadow hover:ring-line-strong focus-within:ring-accent">
               <input
-                type="number"
-                min={min / 1000}
-                max={max / 1000}
-                step={step / 1000}
-                value={shown === undefined ? "" : (shown / 1000).toFixed(2)}
+                type="text"
+                inputMode="decimal"
+                size={5}
+                value={text}
                 disabled={disabled || value === undefined}
                 aria-label={`${label} in millimetres`}
                 aria-invalid={clamped || undefined}
                 onChange={(event) => {
-                  const next = event.currentTarget.valueAsNumber;
-                  if (!Number.isFinite(next)) return;
+                  const raw = event.currentTarget.value;
+                  setTyped(raw);
+                  const next = Number(raw);
+                  if (raw.trim() === "" || !Number.isFinite(next)) return;
                   const micrometres = Math.round((next * 1000) / step) * step;
                   drag(Math.min(max, Math.max(min, micrometres)));
                 }}
@@ -571,12 +600,10 @@ function TravelControl({
                 onKeyDown={(event) => {
                   if (event.key === "Enter") event.currentTarget.blur();
                 }}
-                className="h-7 w-full rounded-md bg-canvas-overlay pr-7 pl-2 text-right font-mono text-xs text-fg ring-1 ring-inset ring-line transition-shadow hover:ring-line-strong focus:ring-accent"
+                className="min-w-0 [field-sizing:content] bg-transparent text-center font-mono text-xs text-fg outline-none"
               />
-              <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-3xs text-fg-subtle">
-                mm
-              </span>
-            </span>
+              <span className="text-3xs text-fg-subtle">mm</span>
+            </label>
           </Settle>
         </div>
       }

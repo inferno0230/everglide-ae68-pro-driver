@@ -262,6 +262,12 @@ function KeyCap({
   if (state?.fill) style.backgroundColor = state.fill;
   if (state?.foreground) style.color = state.foreground;
 
+  // A 1u key is the tight case: the bottom pair is a five-character value and
+  // the RT flag side by side, so it gives up a point of type and half its
+  // inset. Wider keys keep the roomier setting.
+  const corner = width < 60 ? "text-[9px]" : "text-[10px]";
+  const cornerInset = width < 60 ? 2 : 4;
+
   const content = (
     <>
       {/* Live level, drawn behind the legend so the label stays readable. */}
@@ -293,20 +299,42 @@ function KeyCap({
         </span>
       ) : null}
 
+      {/* Corner values carry micrometres — "0.271" is five characters, and on
+          a 1u key the bottom pair has to share that width with the RT flag.
+          Narrow keys drop a point and tuck into the corner so the two never
+          run together. */}
       {state?.topLeft ? (
-        <span className="absolute top-1 left-1 z-10 text-[10px] leading-none font-normal text-fg-subtle">
+        <span
+          className={cn(
+            "absolute z-10 leading-none font-normal text-fg-subtle",
+            corner,
+          )}
+          style={{ top: cornerInset, left: cornerInset }}
+        >
           {state.topLeft}
         </span>
       ) : null}
 
       {state?.bottomLeft ? (
-        <span className="absolute bottom-1 left-1 z-10 text-[10px] leading-none font-normal text-fg-subtle">
+        <span
+          className={cn(
+            "absolute z-10 leading-none font-normal text-fg-subtle",
+            corner,
+          )}
+          style={{ bottom: cornerInset, left: cornerInset }}
+        >
           {state.bottomLeft}
         </span>
       ) : null}
 
       {state?.bottomRight ? (
-        <span className="absolute right-1 bottom-1 z-10 text-[10px] leading-none font-semibold text-accent">
+        <span
+          className={cn(
+            "absolute z-10 leading-none font-semibold text-accent",
+            corner,
+          )}
+          style={{ bottom: cornerInset, right: cornerInset }}
+        >
           {state.bottomRight}
         </span>
       ) : null}
