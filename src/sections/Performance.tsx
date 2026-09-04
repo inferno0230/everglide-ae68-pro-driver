@@ -1,5 +1,11 @@
 import * as React from "react";
-import { Activity, AlertTriangle, MousePointerClick } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  MousePointerClick,
+} from "lucide-react";
 import { useDevice, keyId } from "@/store/device";
 import { KeyboardView, type KeyGeometry } from "@/components/KeyboardView";
 import {
@@ -19,7 +25,7 @@ import {
 } from "@/components/ui";
 import { capLabel } from "@/hid/keycodes";
 import type { Performance as PerfRecord } from "@/hid/protocol/performance";
-import { mm } from "@/lib/utils";
+import { cn, mm } from "@/lib/utils";
 
 /** The board's usable travel. Reads are clamped to this for display. */
 const MAX_TRAVEL_UM = 4000;
@@ -41,6 +47,9 @@ export function PerformanceSection() {
   } = useDevice();
 
   const [live, setLive] = React.useState(false);
+  // The corner values and the guide that explains them travel together: with
+  // the values off there is nothing for the guide to annotate.
+  const [showValues, setShowValues] = React.useState(true);
   const [travel, setTravel] = React.useState<Map<string, number>>(new Map());
 
   const keys = snapshot?.keys ?? [];
@@ -97,16 +106,16 @@ export function PerformanceSection() {
           ? { level: Math.min(1, um / MAX_TRAVEL_UM) }
           : {}),
         ...(clamped.has(key.id) ? { mark: "clamped" as const } : {}),
-        ...(hasDeadZone
+        ...(showValues && hasDeadZone
           ? {
               topLeft: mm(config.pressDead),
               bottomLeft: mm(config.releaseDead),
             }
           : {}),
-        ...(config?.mode === 1 ? { bottomRight: "RT" } : {}),
+        ...(showValues && config?.mode === 1 ? { bottomRight: "RT" } : {}),
       };
     },
-    [travel, live, clamped, performance],
+    [travel, live, clamped, performance, showValues],
   );
 
   if (!snapshot) return null;
@@ -141,7 +150,14 @@ export function PerformanceSection() {
           </div>
         </PanelHeader>
 
-        <div className="flex flex-col items-center gap-4 overflow-x-auto p-4 2xl:flex-row 2xl:justify-center">
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center gap-4 overflow-x-auto p-4",
+            // The guide sits beside the board once there is room for it. On
+            // its own the board is simply centred at every width.
+            showValues && "2xl:flex-row",
+          )}
+        >
           <KeyboardView
             keys={keys}
             selection={selection}
@@ -154,7 +170,7 @@ export function PerformanceSection() {
             ariaLabel="Select keys to edit their actuation"
           />
 
-          <PerformanceKeyGuide />
+          {showValues ? <PerformanceKeyGuide /> : null}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-3 py-2">
@@ -163,13 +179,30 @@ export function PerformanceSection() {
               ? "Click a key to edit it. Shift-click to add more."
               : `${selection.size} of 68 keys selected`}
           </p>
-          <label className="flex cursor-pointer items-center gap-2">
-            <Switch checked={live} onCheckedChange={setLive} id="live" />
-            <span className="flex items-center gap-1 text-xs text-fg">
-              <Activity size={14} className={live ? "text-accent" : ""} />
-              Live travel test
-            </span>
-          </label>
+          <div className="flex items-center gap-4">
+            <label className="flex cursor-pointer items-center gap-2">
+              <Switch
+                checked={showValues}
+                onCheckedChange={setShowValues}
+                id="show-values"
+              />
+              <span className="flex items-center gap-1 text-xs text-fg">
+                {showValues ? (
+                  <Eye size={14} className="text-accent" />
+                ) : (
+                  <EyeOff size={14} />
+                )}
+                Key values
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <Switch checked={live} onCheckedChange={setLive} id="live" />
+              <span className="flex items-center gap-1 text-xs text-fg">
+                <Activity size={14} className={live ? "text-accent" : ""} />
+                Live travel test
+              </span>
+            </label>
+          </div>
         </div>
       </Panel>
 
