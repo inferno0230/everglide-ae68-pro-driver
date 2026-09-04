@@ -87,6 +87,41 @@ function electricalColumns(rowIndex: number, count: number): number[] {
   return Array.from({ length: count }, (_, i) => i);
 }
 
+const MAX_TRAVEL_UM = 4000;
+const REST_ADC = 2340;
+
+interface SimPerformance {
+  mode: number;
+  press: number;
+  release: number;
+  rtFirst: number;
+  rtPress: number;
+  rtRelease: number;
+  pressDead: number;
+  releaseDead: number;
+  axis: number;
+  calibrate: number;
+  axisV2Id: number;
+  axisRangeMax: number;
+  axisCoefficient: number;
+}
+
+const defaultPerformance = (): SimPerformance => ({
+  mode: 0,
+  press: 1200,
+  release: 1200,
+  rtFirst: 300,
+  rtPress: 200,
+  rtRelease: 200,
+  pressDead: 100,
+  releaseDead: 100,
+  axis: 1,
+  calibrate: 1,
+  axisV2Id: 1,
+  axisRangeMax: MAX_TRAVEL_UM,
+  axisCoefficient: 1000,
+});
+
 export class SimulatedKeyboard {
   readonly vendorId = 0x1ca6;
   readonly productId = 0x3006;
@@ -98,12 +133,19 @@ export class SimulatedKeyboard {
   opened = false;
 
   private listeners = new Set<Listener>();
+  private performance = new Map<string, SimPerformance>();
   private keymap: number[][][] = [];
   private activeProfile = 0;
   private profileNames = ["Config 1", "Config 2", "Config 3", "Config 4"];
   private reportRateCode = 3;
+  private calibrating = false;
 
   constructor() {
+    for (let r = 1; r < LAYOUT.length; r++) {
+      const keys = LAYOUT[r] ?? [];
+      const cols = electricalColumns(r, keys.length);
+      for (const col of cols) this.performance.set(`${r}:${col}`, defaultPerformance());
+    }
     this.keymap = this.buildKeymap();
   }
 
@@ -199,6 +241,8 @@ export class SimulatedKeyboard {
         return this.global(req, reply);
       case Category.LayoutAndKey:
         return this.layout(req, reply, put16);
+      case Category.Performance:
+        return this.perf(req, reply, put16);
       default:
         return reply;
     }
@@ -234,6 +278,11 @@ export class SimulatedKeyboard {
 
   private global(req: Uint8Array, reply: Uint8Array): Uint8Array {
     switch (req[1]) {
+      case 1: // factory reset
+        for (const [key] of this.performance) {
+          this.performance.set(key, defaultPerformance());
+        }
+        return reply;
       case 2: // save
         return reply;
       case 3:
@@ -268,6 +317,9 @@ export class SimulatedKeyboard {
       case 5:
         if (req[2] === 1) reply[3] = this.reportRateCode;
         else this.reportRateCode = req[3] ?? 3;
+        return reply;
+      case 6:
+        this.calibrating = req[2] === 0;
         return reply;
       case 8:
         // Two zones. The second byte is the zone's effect count, not its LED
@@ -328,6 +380,81 @@ export class SimulatedKeyboard {
     }
   }
 
+  private perf(
+    req: Uint8Array,
+    reply: Uint8Array,
+    put16: (at: number, v: number) => void,
+  ): Uint8Array {
+    const write = (p: SimPerformance) => {
+      reply[4] = p.mode;
+      put16(5, p.press);
+      put16(7, p.release);
+      put16(9, p.rtFirst);
+      put16(11, p.rtPress);
+      put16(13, p.rtRelease);
+      put16(15, p.pressDead);
+      put16(17, p.releaseDead);
+      reply[19] = p.axis;
+      reply[20] = p.calibrate;
+      put16(21, p.axisV2Id);
+      put16(23, p.axisRangeMax);
+      put16(25, p.axisCoefficient);
+    };
+
+    switch (req[1]) {
+      case 1: {
+        const key = `${req[2]}:${req[3]}`;
+        write(this.performance.get(key) ?? defaultPerformance());
+        return reply;
+      }
+      case 2: {
+        const key = `${req[2]}:${req[3]}`;
+        const u16 = (at: number) => (req[at] ?? 0) | ((req[at + 1] ?? 0) << 8);
+        const next: SimPerformance = {
+          mode: req[4] ?? 0,
+          press: u16(5),
+          release: u16(7),
+          rtFirst: u16(9),
+          rtPress: u16(11),
+          rtRelease: u16(13),
+          pressDead: u16(15),
+          releaseDead: u16(17),
+          axis: req[19] ?? 1,
+          calibrate: req[20] ?? 1,
+          axisV2Id: u16(21),
+          axisRangeMax: u16(23),
+          axisCoefficient: u16(25),
+        };
+        // The documented clamp: fixed mode collapses the reset point onto the
+        // actuation point. Writing this here is what makes the UI's
+        // reconcile-from-the-reply path testable without hardware.
+        if (next.mode === 0) next.release = next.press;
+        this.performance.set(key, next);
+        write(next);
+        return reply;
+      }
+      case 3: {
+        // AxisData. No keys are physically pressed in a simulation, so this
+        // reports rest values with a little sensor noise, never fake presses.
+        const kind = req[2] ?? 0;
+        const r = req[3] ?? 0;
+        const cols = electricalColumns(r, rowOf(r).length);
+        for (const col of cols) {
+          const noise = Math.round((Math.random() - 0.5) * 6);
+          const value =
+            kind === 0 ? REST_ADC + noise : kind === 2 ? MAX_TRAVEL_UM : 0;
+          put16(4 + col * 2, Math.max(0, value));
+        }
+        return reply;
+      }
+      default:
+        return reply;
+    }
+  }
+
+  get isCalibrating(): boolean {
+    return this.calibrating;
+  }
 }
 
 /** The simulated board, typed as the HIDDevice the Transport expects. */

@@ -9,6 +9,10 @@ import { strict as assert } from "node:assert";
 import { Transport } from "./transport";
 import { Keyboard } from "./keyboard";
 import { createSimulatedDevice } from "./simulator";
+import {
+  AxisKind,
+  SaveTarget,
+} from "./protocol/constants";
 
 let failures = 0;
 async function check(name: string, fn: () => Promise<void> | void) {
@@ -83,12 +87,44 @@ await check("space is addressable at its electrical column, not its x", async ()
   assert.equal(map[6], 44, "column 6 holds the Space keycode");
 });
 
+console.log("telemetry");
+
+await check("axis polling returns one reading per column", async () => {
+  const adc = await keyboard.axisData(AxisKind.Adc, 3);
+  const populated = adc.filter((v) => v > 0);
+  assert.equal(populated.length, 14, "row 3 has 14 keys");
+  assert.ok(
+    populated.every((v) => v > 2300 && v < 2400),
+    "resting ADC sits near 2340",
+  );
+});
+
+await check("interleaved row polls do not cross replies", async () => {
+  // Four rows in flight at once: only kind+row disambiguates these, so this is
+  // the case that breaks a transport matching on two bytes.
+  const [r2, r3, r4, r5] = await Promise.all([
+    keyboard.axisData(AxisKind.Route, 2),
+    keyboard.axisData(AxisKind.Route, 3),
+    keyboard.axisData(AxisKind.Route, 4),
+    keyboard.axisData(AxisKind.Route, 5),
+  ]);
+  assert.equal(r2.length, 30);
+  assert.equal(r3.length, 30);
+  assert.equal(r4.length, 30);
+  assert.equal(r5.length, 30);
+});
+
 console.log("profiles and save");
 
 await check("reads four profiles and the active one", () => {
   assert.equal(snapshot.profiles.length, 4);
   assert.equal(snapshot.profiles[0]?.name, "Config 1");
   assert.equal(snapshot.activeProfile, 0);
+});
+
+await check("save targets are accepted", async () => {
+  await keyboard.save(SaveTarget.Performance);
+  await keyboard.save(SaveTarget.All);
 });
 
 await check("device reports zone topology and dual lighting", () => {

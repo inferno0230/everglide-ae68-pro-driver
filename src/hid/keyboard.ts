@@ -5,9 +5,10 @@
  * can await these freely without coordinating.
  */
 
-import { Transport } from "./transport";
+import { Transport, type SendOptions } from "./transport";
 import * as codec from "./codec";
 import {
+  AxisKind,
   Category,
   PROFILE_COUNT,
   SaveTarget,
@@ -15,6 +16,12 @@ import {
 import * as device from "./protocol/device";
 import * as glob from "./protocol/global";
 import * as layout from "./protocol/layout";
+import * as perf from "./protocol/performance";
+
+/** Flash writes and calibration take noticeably longer than a read. */
+const SLOW: SendOptions = { timeout: 3000 };
+/** AxisData replies are only distinguishable by kind + row. */
+const AXIS: SendOptions = { matchBytes: 4, timeout: 500, retries: 1 };
 
 /** Matrix rows the board might populate. */
 const MAX_ROWS = 8;
@@ -132,6 +139,15 @@ export class Keyboard {
     );
   }
 
+  // --- performance ---------------------------------------------------------
+
+  /** One row of live telemetry. Poll at 15-25 Hz for a travel test. */
+  async axisData(kind: AxisKind, row: number): Promise<number[]> {
+    return perf.parseAxisData(
+      await this.transport.send(perf.getAxisData(kind, row), AXIS),
+    );
+  }
+
   // --- profiles, calibration, save -----------------------------------------
 
   async activeProfile(): Promise<number> {
@@ -145,7 +161,21 @@ export class Keyboard {
       await this.transport.send(glob.getProfileName(index), { matchBytes: 3 }),
     );
   }
+
+  /** Start, then press every key fully down and fully release it. */
+  async startCalibration(): Promise<void> {
+    await this.transport.send(glob.startCalibration(), SLOW);
+  }
+
+  async stopCalibration(): Promise<void> {
+    await this.transport.send(glob.stopCalibration(), SLOW);
+  }
+
+  /** Nothing written above survives a power cycle until this runs. */
+  async save(target: SaveTarget = SaveTarget.All): Promise<void> {
+    await this.transport.send(glob.saveParam(target), SLOW);
+  }
 }
 
-export { Transport, codec, Category, SaveTarget };
-export { layout, device, glob };
+export { Transport, codec, Category, AxisKind, SaveTarget };
+export { perf, layout, device, glob };

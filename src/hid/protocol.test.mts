@@ -8,6 +8,7 @@
 import { strict as assert } from "node:assert";
 import { pad64, readU16, u16le, mmToUm } from "./codec";
 import * as layout from "./protocol/layout";
+import { decodeCombo, describe as describeKey } from "./keycodes";
 
 let failures = 0;
 function check(name: string, fn: () => void): void {
@@ -79,6 +80,22 @@ check("layout style unpacks packed u16 fields", () => {
 
 check("0xFF marks an unused row", () => {
   assert.deepEqual(layout.parseKeyLayoutStyle(pad64([3, 5, 0xff])), []);
+});
+
+console.log("keycodes");
+
+check("combo keycodes decode to modifiers plus a base key", () => {
+  // PROTOCOL.md section 5 worked examples.
+  assert.deepEqual(decodeCombo(0x1329), { modifiers: 3, base: 0x29 });
+  assert.deepEqual(decodeCombo(0x1808), { modifiers: 8, base: 0x08 });
+  assert.equal(describeKey(0x1808), "Win+E");
+  assert.equal(describeKey(0x1329), "Ctrl+Shift+Esc");
+});
+
+check("catalogued keycodes resolve to labels", () => {
+  assert.equal(describeKey(44), "Space");
+  assert.equal(describeKey(0xf101), "Switch Fn1 layer");
+  assert.equal(describeKey(0), "Empty Key");
 });
 
 console.log(failures === 0 ? "\nall checks passed" : `\n${failures} FAILED`);

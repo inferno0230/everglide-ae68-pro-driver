@@ -11,6 +11,7 @@ account, telemetry, or remote configuration service required.
 
 ## Features
 
+- Run and monitor full-key switch calibration.
 - Inspect firmware, protocol, board, connection, and lighting information.
 - Explore the complete interface with a simulated keyboard.
 
@@ -48,12 +49,24 @@ synthetic and no HID device is opened.
 1. Connect the keyboard over USB and close any other configurator that may be
    using it. Only one application can hold the HID interface at a time.
 2. Choose the section you want from the sidebar.
+5. Select **Save to keyboard** when finished.
+
+Changes take effect immediately but initially live only in the keyboard's RAM.
+They are lost when the keyboard loses power unless **Save to keyboard** writes
+them to flash. Save before unplugging the board or switching profiles.
+
+### Calibration
+
+Start calibration, press every key fully down, and allow each key to return
+fully. Finish the run only after all 68 keys have been exercised, then save the
+calibration from the sidebar.
 
 ## Feature status
 
 | Area | Status |
 | --- | --- |
 | Device discovery and information | Working |
+| Calibration | Working |
 | Simulated device | Working |
 
 ## TODO / not supported yet
@@ -76,6 +89,10 @@ layout, and interface are intentionally specific to the Everglide AE68 Pro.
 - Use Chrome or Edge on desktop.
 - Close the vendor configurator and other copies of this driver.
 - Reload the page, reconnect the cable, and try **Choose keyboard** again.
+
+**Changes work but disappear after unplugging**
+
+Select **Save to keyboard**. Until then, edits are active only in RAM.
 
 **The page asks for permission again**
 

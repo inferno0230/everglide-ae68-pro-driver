@@ -1,0 +1,1579 @@
+{
+ "0": {
+  "label": "Empty Key",
+  "group": "special",
+  "hid": 0,
+  "vendorName": " "
+ },
+ "1": {
+  "label": "Transparent Key",
+  "group": "special",
+  "hid": 1,
+  "nativeName": "△"
+ },
+ "4": {
+  "label": "A",
+  "group": "basic",
+  "hid": 4
+ },
+ "5": {
+  "label": "B",
+  "group": "basic",
+  "hid": 5
+ },
+ "6": {
+  "label": "C",
+  "group": "basic",
+  "hid": 6
+ },
+ "7": {
+  "label": "D",
+  "group": "basic",
+  "hid": 7
+ },
+ "8": {
+  "label": "E",
+  "group": "basic",
+  "hid": 8
+ },
+ "9": {
+  "label": "F",
+  "group": "basic",
+  "hid": 9
+ },
+ "10": {
+  "label": "G",
+  "group": "basic",
+  "hid": 10
+ },
+ "11": {
+  "label": "H",
+  "group": "basic",
+  "hid": 11
+ },
+ "12": {
+  "label": "I",
+  "group": "basic",
+  "hid": 12
+ },
+ "13": {
+  "label": "J",
+  "group": "basic",
+  "hid": 13
+ },
+ "14": {
+  "label": "K",
+  "group": "basic",
+  "hid": 14
+ },
+ "15": {
+  "label": "L",
+  "group": "basic",
+  "hid": 15
+ },
+ "16": {
+  "label": "M",
+  "group": "basic",
+  "hid": 16
+ },
+ "17": {
+  "label": "N",
+  "group": "basic",
+  "hid": 17
+ },
+ "18": {
+  "label": "O",
+  "group": "basic",
+  "hid": 18
+ },
+ "19": {
+  "label": "P",
+  "group": "basic",
+  "hid": 19
+ },
+ "20": {
+  "label": "Q",
+  "group": "basic",
+  "hid": 20
+ },
+ "21": {
+  "label": "R",
+  "group": "basic",
+  "hid": 21
+ },
+ "22": {
+  "label": "S",
+  "group": "basic",
+  "hid": 22
+ },
+ "23": {
+  "label": "T",
+  "group": "basic",
+  "hid": 23
+ },
+ "24": {
+  "label": "U",
+  "group": "basic",
+  "hid": 24
+ },
+ "25": {
+  "label": "V",
+  "group": "basic",
+  "hid": 25
+ },
+ "26": {
+  "label": "W",
+  "group": "basic",
+  "hid": 26
+ },
+ "27": {
+  "label": "X",
+  "group": "basic",
+  "hid": 27
+ },
+ "28": {
+  "label": "Y",
+  "group": "basic",
+  "hid": 28
+ },
+ "29": {
+  "label": "Z",
+  "group": "basic",
+  "hid": 29
+ },
+ "30": {
+  "label": "1 !",
+  "group": "basic",
+  "hid": 30
+ },
+ "31": {
+  "label": "2 @",
+  "group": "basic",
+  "hid": 31
+ },
+ "32": {
+  "label": "3 #",
+  "group": "basic",
+  "hid": 32
+ },
+ "33": {
+  "label": "4 $",
+  "group": "basic",
+  "hid": 33
+ },
+ "34": {
+  "label": "5 %",
+  "group": "basic",
+  "hid": 34
+ },
+ "35": {
+  "label": "6 ^",
+  "group": "basic",
+  "hid": 35
+ },
+ "36": {
+  "label": "7 &",
+  "group": "basic",
+  "hid": 36
+ },
+ "37": {
+  "label": "8 *",
+  "group": "basic",
+  "hid": 37
+ },
+ "38": {
+  "label": "9 (",
+  "group": "basic",
+  "hid": 38
+ },
+ "39": {
+  "label": "0 )",
+  "group": "basic",
+  "hid": 39
+ },
+ "40": {
+  "label": "Enter",
+  "group": "basic",
+  "hid": 40
+ },
+ "41": {
+  "label": "Esc",
+  "group": "basic",
+  "hid": 41
+ },
+ "42": {
+  "label": "Backspace",
+  "group": "basic",
+  "hid": 42
+ },
+ "43": {
+  "label": "Tab",
+  "group": "basic",
+  "hid": 43
+ },
+ "44": {
+  "label": "Space",
+  "group": "basic",
+  "hid": 44
+ },
+ "45": {
+  "label": "- _",
+  "group": "basic",
+  "hid": 45
+ },
+ "46": {
+  "label": "= +",
+  "group": "basic",
+  "hid": 46
+ },
+ "47": {
+  "label": "[ {",
+  "group": "basic",
+  "hid": 47
+ },
+ "48": {
+  "label": "] }",
+  "group": "basic",
+  "hid": 48
+ },
+ "49": {
+  "label": "\\ |",
+  "group": "basic",
+  "hid": 49
+ },
+ "50": {
+  "label": "# ~",
+  "group": "basic",
+  "hid": 50
+ },
+ "51": {
+  "label": "; :",
+  "group": "basic",
+  "hid": 51
+ },
+ "52": {
+  "label": "' \"",
+  "group": "basic",
+  "hid": 52
+ },
+ "53": {
+  "label": "` ~",
+  "group": "basic",
+  "hid": 53
+ },
+ "54": {
+  "label": ", <",
+  "group": "basic",
+  "hid": 54
+ },
+ "55": {
+  "label": ". >",
+  "group": "basic",
+  "hid": 55
+ },
+ "56": {
+  "label": "/ ?",
+  "group": "basic",
+  "hid": 56
+ },
+ "57": {
+  "label": "Caps",
+  "group": "basic",
+  "hid": 57
+ },
+ "58": {
+  "label": "F1",
+  "group": "basic",
+  "hid": 58
+ },
+ "59": {
+  "label": "F2",
+  "group": "basic",
+  "hid": 59
+ },
+ "60": {
+  "label": "F3",
+  "group": "basic",
+  "hid": 60
+ },
+ "61": {
+  "label": "F4",
+  "group": "basic",
+  "hid": 61
+ },
+ "62": {
+  "label": "F5",
+  "group": "basic",
+  "hid": 62
+ },
+ "63": {
+  "label": "F6",
+  "group": "basic",
+  "hid": 63
+ },
+ "64": {
+  "label": "F7",
+  "group": "basic",
+  "hid": 64
+ },
+ "65": {
+  "label": "F8",
+  "group": "basic",
+  "hid": 65
+ },
+ "66": {
+  "label": "F9",
+  "group": "basic",
+  "hid": 66
+ },
+ "67": {
+  "label": "F10",
+  "group": "basic",
+  "hid": 67
+ },
+ "68": {
+  "label": "F11",
+  "group": "basic",
+  "hid": 68
+ },
+ "69": {
+  "label": "F12",
+  "group": "basic",
+  "hid": 69
+ },
+ "70": {
+  "label": "PrtScr",
+  "group": "basic",
+  "hid": 70
+ },
+ "71": {
+  "label": "Scroll",
+  "group": "basic",
+  "hid": 71
+ },
+ "72": {
+  "label": "Pause",
+  "group": "basic",
+  "hid": 72
+ },
+ "73": {
+  "label": "Insert",
+  "group": "basic",
+  "hid": 73
+ },
+ "74": {
+  "label": "Home",
+  "group": "basic",
+  "hid": 74
+ },
+ "75": {
+  "label": "PgUp",
+  "group": "basic",
+  "hid": 75
+ },
+ "76": {
+  "label": "Delete",
+  "group": "basic",
+  "hid": 76
+ },
+ "77": {
+  "label": "End",
+  "group": "basic",
+  "hid": 77
+ },
+ "78": {
+  "label": "PgDn",
+  "group": "basic",
+  "hid": 78
+ },
+ "79": {
+  "label": "→",
+  "group": "basic",
+  "hid": 79
+ },
+ "80": {
+  "label": "←",
+  "group": "basic",
+  "hid": 80
+ },
+ "81": {
+  "label": "↓",
+  "group": "basic",
+  "hid": 81
+ },
+ "82": {
+  "label": "↑",
+  "group": "basic",
+  "hid": 82
+ },
+ "83": {
+  "label": "Num Lock",
+  "group": "basic",
+  "hid": 83
+ },
+ "84": {
+  "label": "/',",
+  "group": "basic",
+  "hid": 84
+ },
+ "85": {
+  "label": "*',",
+  "group": "basic",
+  "hid": 85
+ },
+ "86": {
+  "label": "-',",
+  "group": "basic",
+  "hid": 86
+ },
+ "87": {
+  "label": "+',",
+  "group": "basic",
+  "hid": 87
+ },
+ "88": {
+  "label": "PEnter",
+  "group": "basic",
+  "hid": 88
+ },
+ "89": {
+  "label": "P1",
+  "group": "basic",
+  "hid": 89
+ },
+ "90": {
+  "label": "P2",
+  "group": "basic",
+  "hid": 90
+ },
+ "91": {
+  "label": "P3",
+  "group": "basic",
+  "hid": 91
+ },
+ "92": {
+  "label": "P4",
+  "group": "basic",
+  "hid": 92
+ },
+ "93": {
+  "label": "P5",
+  "group": "basic",
+  "hid": 93
+ },
+ "94": {
+  "label": "P6",
+  "group": "basic",
+  "hid": 94
+ },
+ "95": {
+  "label": "P7",
+  "group": "basic",
+  "hid": 95
+ },
+ "96": {
+  "label": "P8",
+  "group": "basic",
+  "hid": 96
+ },
+ "97": {
+  "label": "P9",
+  "group": "basic",
+  "hid": 97
+ },
+ "98": {
+  "label": "P0",
+  "group": "basic",
+  "hid": 98
+ },
+ "99": {
+  "label": ". Del",
+  "group": "basic",
+  "hid": 99
+ },
+ "100": {
+  "label": "Nubs",
+  "group": "basic",
+  "hid": 100
+ },
+ "101": {
+  "label": "App",
+  "group": "basic",
+  "hid": 101
+ },
+ "102": {
+  "label": "Power",
+  "group": "basic",
+  "hid": 102
+ },
+ "103": {
+  "label": "Peql",
+  "group": "basic",
+  "hid": 103
+ },
+ "104": {
+  "label": "F13",
+  "group": "basic",
+  "hid": 104
+ },
+ "105": {
+  "label": "F14",
+  "group": "basic",
+  "hid": 105
+ },
+ "106": {
+  "label": "F15",
+  "group": "basic",
+  "hid": 106
+ },
+ "107": {
+  "label": "F16",
+  "group": "basic",
+  "hid": 107
+ },
+ "108": {
+  "label": "F17",
+  "group": "basic",
+  "hid": 108
+ },
+ "109": {
+  "label": "F18",
+  "group": "basic",
+  "hid": 109
+ },
+ "110": {
+  "label": "F19",
+  "group": "basic",
+  "hid": 110
+ },
+ "111": {
+  "label": "F20",
+  "group": "basic",
+  "hid": 111
+ },
+ "112": {
+  "label": "F21",
+  "group": "basic",
+  "hid": 112
+ },
+ "113": {
+  "label": "F22",
+  "group": "basic",
+  "hid": 113
+ },
+ "114": {
+  "label": "F23",
+  "group": "basic",
+  "hid": 114
+ },
+ "115": {
+  "label": "F24",
+  "group": "basic",
+  "hid": 115
+ },
+ "135": {
+  "label": "Ro",
+  "group": "basic",
+  "hid": 135,
+  "nativeName": "\\ ろ"
+ },
+ "136": {
+  "label": "Kana",
+  "group": "basic",
+  "hid": 136
+ },
+ "137": {
+  "label": "Yen",
+  "group": "basic",
+  "hid": 137,
+  "nativeName": "| ¥"
+ },
+ "138": {
+  "label": "Convert",
+  "group": "basic",
+  "hid": 138,
+  "nativeName": "変換"
+ },
+ "139": {
+  "label": "No Convert",
+  "group": "basic",
+  "hid": 139,
+  "nativeName": "無変換",
+  "vendorName": "NoConv"
+ },
+ "144": {
+  "label": "Hangul/English",
+  "group": "basic",
+  "hid": 144,
+  "nativeName": "한영",
+  "vendorName": "Han/En"
+ },
+ "145": {
+  "label": "Hanja",
+  "group": "basic",
+  "hid": 145,
+  "nativeName": "漢字"
+ },
+ "146": {
+  "label": "Katakana",
+  "group": "basic",
+  "hid": 146,
+  "nativeName": "かな"
+ },
+ "224": {
+  "label": "L-Ctrl",
+  "group": "basic",
+  "hid": 224
+ },
+ "225": {
+  "label": "L-Shift",
+  "group": "basic",
+  "hid": 225
+ },
+ "226": {
+  "label": "L-Alt",
+  "group": "basic",
+  "hid": 226
+ },
+ "227": {
+  "label": "L-Gui",
+  "group": "basic",
+  "hid": 227
+ },
+ "228": {
+  "label": "R-Ctrl",
+  "group": "basic",
+  "hid": 228
+ },
+ "229": {
+  "label": "R-Shift",
+  "group": "basic",
+  "hid": 229
+ },
+ "230": {
+  "label": "R-Alt",
+  "group": "basic",
+  "hid": 230
+ },
+ "231": {
+  "label": "R-Gui",
+  "group": "basic",
+  "hid": 231
+ },
+ "4434": {
+  "label": "MCON",
+  "group": "system",
+  "hid": null
+ },
+ "4905": {
+  "label": "WTMG",
+  "group": "system",
+  "hid": null
+ },
+ "6151": {
+  "label": "WDSK",
+  "group": "system",
+  "hid": null
+ },
+ "6152": {
+  "label": "WFIL",
+  "group": "system",
+  "hid": null
+ },
+ "6165": {
+  "label": "WCMD",
+  "group": "system",
+  "hid": null
+ },
+ "8303": {
+  "label": "Bri+",
+  "group": "media",
+  "hid": null
+ },
+ "8304": {
+  "label": "Bri-",
+  "group": "media",
+  "hid": null
+ },
+ "8373": {
+  "label": "Next",
+  "group": "media",
+  "hid": null
+ },
+ "8374": {
+  "label": "Prev",
+  "group": "media",
+  "hid": null
+ },
+ "8375": {
+  "label": "Stop",
+  "group": "media",
+  "hid": null
+ },
+ "8397": {
+  "label": "Play/Pause",
+  "group": "media",
+  "hid": null,
+  "vendorName": "Play"
+ },
+ "8418": {
+  "label": "Mute",
+  "group": "media",
+  "hid": null
+ },
+ "8425": {
+  "label": "Vol+",
+  "group": "media",
+  "hid": null
+ },
+ "8426": {
+  "label": "Vol-",
+  "group": "media",
+  "hid": null
+ },
+ "8579": {
+  "label": "Music",
+  "group": "media",
+  "hid": null
+ },
+ "8586": {
+  "label": "Mail",
+  "group": "media",
+  "hid": null,
+  "vendorName": "Vol-"
+ },
+ "8594": {
+  "label": "Calculator",
+  "group": "media",
+  "hid": null,
+  "vendorName": "Calc"
+ },
+ "8596": {
+  "label": "My Computer",
+  "group": "media",
+  "hid": null,
+  "vendorName": "Mute"
+ },
+ "8739": {
+  "label": "Browser",
+  "group": "media",
+  "hid": null,
+  "vendorName": "Vol+"
+ },
+ "16384": {
+  "label": "Mouse Release",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-Free"
+ },
+ "16640": {
+  "label": "Mouse Left",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-Left"
+ },
+ "16896": {
+  "label": "Mouse Right",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-Right"
+ },
+ "17152": {
+  "label": "Mouse Middle",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-Middle"
+ },
+ "17408": {
+  "label": "Mouse Forward",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-FWD"
+ },
+ "17664": {
+  "label": "Mouse Back",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-BACK"
+ },
+ "17920": {
+  "label": "Mouse Left Move",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-MLX"
+ },
+ "18176": {
+  "label": "Mouse Right Move",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-MRX"
+ },
+ "18432": {
+  "label": "Mouse Up",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-MUY"
+ },
+ "18688": {
+  "label": "Mouse Down",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-MDY"
+ },
+ "18945": {
+  "label": "Mouse Wheel Forward",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-WHF"
+ },
+ "19201": {
+  "label": "Mouse Wheel Back",
+  "group": "mouse",
+  "hid": null,
+  "vendorName": "M-WHB"
+ },
+ "20993": {
+  "label": "D-Pad Up",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Direction UP"
+ },
+ "20994": {
+  "label": "D-Pad Down",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Direction DOWN"
+ },
+ "20996": {
+  "label": "D-Pad Left",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Direction LEFT"
+ },
+ "21000": {
+  "label": "D-Pad Right",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Direction RIGHT"
+ },
+ "21008": {
+  "label": "Start",
+  "group": "gamepad",
+  "hid": null
+ },
+ "21024": {
+  "label": "Select",
+  "group": "gamepad",
+  "hid": null
+ },
+ "21056": {
+  "label": "Press Left Stick",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Left Stick PRESS"
+ },
+ "21120": {
+  "label": "Press Right Stick",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Right Stick PRESS"
+ },
+ "21249": {
+  "label": "Left Shoulder",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Left Bumper"
+ },
+ "21250": {
+  "label": "Right Shoulder",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Right Bumper"
+ },
+ "21252": {
+  "label": "Menu",
+  "group": "gamepad",
+  "hid": null
+ },
+ "21264": {
+  "label": "Button A",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "A"
+ },
+ "21280": {
+  "label": "Button B",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "B"
+ },
+ "21312": {
+  "label": "Button X",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "X"
+ },
+ "21376": {
+  "label": "Button Y",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Y"
+ },
+ "21504": {
+  "label": "Left Trigger",
+  "group": "gamepad",
+  "hid": null
+ },
+ "21760": {
+  "label": "Right Trigger",
+  "group": "gamepad",
+  "hid": null
+ },
+ "22017": {
+  "label": "Left Stick Right",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Left Stick RIGHT"
+ },
+ "22018": {
+  "label": "Left Stick Left",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Left Stick LEFT"
+ },
+ "22529": {
+  "label": "Left Stick Up",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Left Stick UP"
+ },
+ "22530": {
+  "label": "Left Stick Down",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Left Stick DOWN"
+ },
+ "23041": {
+  "label": "Right Stick Right",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Right Stick RIGHT"
+ },
+ "23042": {
+  "label": "Right Stick Left",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Right Stick LEFT"
+ },
+ "23553": {
+  "label": "Right Stick Up",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Right Stick UP"
+ },
+ "23554": {
+  "label": "Right Stick Down",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "Right Stick DOWN"
+ },
+ "49153": {
+  "label": "Button 1",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_1"
+ },
+ "49154": {
+  "label": "Button 2",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_2"
+ },
+ "49156": {
+  "label": "Button 3",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_3"
+ },
+ "49160": {
+  "label": "Button 4",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_4"
+ },
+ "49168": {
+  "label": "Button 5",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_5"
+ },
+ "49184": {
+  "label": "Button 6",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_6"
+ },
+ "49216": {
+  "label": "Button 7",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_7"
+ },
+ "49280": {
+  "label": "Button 8",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_8"
+ },
+ "49409": {
+  "label": "Button 9",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_9"
+ },
+ "49410": {
+  "label": "Button 10",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_10"
+ },
+ "49412": {
+  "label": "Button 11",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_11"
+ },
+ "49416": {
+  "label": "Button 12",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_12"
+ },
+ "49664": {
+  "label": "X-Axis Left (Stick 1 Left)",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_XL"
+ },
+ "49665": {
+  "label": "X-Axis Right (Stick 1 Right)",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_XR"
+ },
+ "50176": {
+  "label": "Y-Axis Up (Stick 1 Up)",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_YU"
+ },
+ "50177": {
+  "label": "Y-Axis Down (Stick 1 Down)",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_YD"
+ },
+ "50688": {
+  "label": "Z-Axis Forward (Stick 2 Left)",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_ZU"
+ },
+ "50689": {
+  "label": "Z-Axis Backward (Stick 2 Right)",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_ZD"
+ },
+ "51200": {
+  "label": "Z-Axis Rotate Forward (Stick 2 Up)",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_ZFR"
+ },
+ "51201": {
+  "label": "Z-Axis Rotate Backward (Stick 2 Down)",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_ZRR"
+ },
+ "51712": {
+  "label": "X-Axis Rotate Right",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_XFR"
+ },
+ "51713": {
+  "label": "X-Axis Rotate Left",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_XRR"
+ },
+ "52224": {
+  "label": "Y-Axis Rotate Down",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_YFR"
+ },
+ "52225": {
+  "label": "Y-Axis Rotate Up",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_YRR"
+ },
+ "52736": {
+  "label": "Accelerator",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_TH"
+ },
+ "52992": {
+  "label": "Elevator",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_E"
+ },
+ "52993": {
+  "label": "Throttle",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_A"
+ },
+ "52994": {
+  "label": "Rudder",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_R"
+ },
+ "52995": {
+  "label": "Trigger",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_T"
+ },
+ "54017": {
+  "label": "D-Pad Up",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_DIR_UP"
+ },
+ "54019": {
+  "label": "D-Pad Right",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_DIR_RIGHT"
+ },
+ "54021": {
+  "label": "D-Pad Down",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_DIR_DOWN"
+ },
+ "54023": {
+  "label": "D-Pad Left",
+  "group": "gamepad",
+  "hid": null,
+  "vendorName": "GP_DIR_LEFT"
+ },
+ "61696": {
+  "label": "Switch the main layer",
+  "group": "special",
+  "hid": null,
+  "vendorName": "Fn0"
+ },
+ "61697": {
+  "label": "Switch Fn1 layer",
+  "group": "special",
+  "hid": null,
+  "vendorName": "Fn1"
+ },
+ "61698": {
+  "label": "Switch Fn2 layer",
+  "group": "special",
+  "hid": null,
+  "vendorName": "Fn2"
+ },
+ "61699": {
+  "label": "Switch Fn3 layer",
+  "group": "special",
+  "hid": null,
+  "vendorName": "Fn3"
+ },
+ "61952": {
+  "label": "Reset (Hold to activate)",
+  "group": "control",
+  "hid": null,
+  "vendorName": "Reset"
+ },
+ "61953": {
+  "label": "Switch to Windows Layout (Hold to activate)",
+  "group": "control",
+  "hid": null,
+  "vendorName": "Win"
+ },
+ "61954": {
+  "label": "Switch to Mac Layout (Hold to activate)",
+  "group": "control",
+  "hid": null,
+  "vendorName": "Mac"
+ },
+ "61955": {
+  "label": "Calibrate Magnetic Axis (Hold to activate)",
+  "group": "control",
+  "hid": null,
+  "vendorName": "Adj"
+ },
+ "61957": {
+  "label": "Switch to Config 1",
+  "group": "control",
+  "hid": null,
+  "vendorName": "Config1"
+ },
+ "61958": {
+  "label": "Switch to Config 2",
+  "group": "control",
+  "hid": null,
+  "vendorName": "Config2"
+ },
+ "61959": {
+  "label": "Switch to Config 3",
+  "group": "control",
+  "hid": null,
+  "vendorName": "Config3"
+ },
+ "61960": {
+  "label": "Switch to Config 4",
+  "group": "control",
+  "hid": null,
+  "vendorName": "Config4"
+ },
+ "61961": {
+  "label": "Lock Win Key",
+  "group": "control",
+  "hid": null,
+  "vendorName": "LockWin"
+ },
+ "61962": {
+  "label": "Link",
+  "group": "control",
+  "hid": null
+ },
+ "61964": {
+  "label": "FNUM",
+  "group": "control",
+  "hid": null
+ },
+ "62208": {
+  "label": "Lighting Mode",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "Mode"
+ },
+ "62209": {
+  "label": "Lighting Color",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "Color"
+ },
+ "62210": {
+  "label": "Lighting Bri+",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "Bri+"
+ },
+ "62211": {
+  "label": "Lighting Bri-",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "Bri-"
+ },
+ "62212": {
+  "label": "Lighting Spd+",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "Spd+"
+ },
+ "62213": {
+  "label": "Lighting Spd-",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "Spd-"
+ },
+ "62214": {
+  "label": "Lighting Prev",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "Prev"
+ },
+ "62215": {
+  "label": "Lighting On/Off",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "OnOff"
+ },
+ "62216": {
+  "label": "Lighting Dir",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "Dir"
+ },
+ "62224": {
+  "label": "Decorative Lighting Mode",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "D1_Mode"
+ },
+ "62225": {
+  "label": "Decorative Lighting Color",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "D1_Color"
+ },
+ "62226": {
+  "label": "Decorative Lighting Bri+",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "D1_Bri+"
+ },
+ "62227": {
+  "label": "Decorative Lighting Bri-",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "D1_Bri-"
+ },
+ "62228": {
+  "label": "Decorative Lighting Spd+",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "D1_Spd+"
+ },
+ "62229": {
+  "label": "Decorative Lighting Spd-",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "D1_Spd-"
+ },
+ "62230": {
+  "label": "Decorative Lighting Prev",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "D1_Prev"
+ },
+ "62231": {
+  "label": "Decorative Lighting On/Off",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "D1_OnOff"
+ },
+ "62232": {
+  "label": "Decorative Lighting Dir",
+  "group": "lighting",
+  "hid": null,
+  "vendorName": "D1_Dir"
+ },
+ "62240": {
+  "label": "D2_Mode",
+  "group": "lighting",
+  "hid": null
+ },
+ "62241": {
+  "label": "D2_Color",
+  "group": "lighting",
+  "hid": null
+ },
+ "62242": {
+  "label": "D2_Bri+",
+  "group": "lighting",
+  "hid": null
+ },
+ "62243": {
+  "label": "D2_Bri-",
+  "group": "lighting",
+  "hid": null
+ },
+ "62244": {
+  "label": "D2_Spd+",
+  "group": "lighting",
+  "hid": null
+ },
+ "62245": {
+  "label": "D2_Spd-",
+  "group": "lighting",
+  "hid": null
+ },
+ "62246": {
+  "label": "D2_Prev",
+  "group": "lighting",
+  "hid": null
+ },
+ "62247": {
+  "label": "D2_OnOff",
+  "group": "lighting",
+  "hid": null
+ },
+ "62248": {
+  "label": "D2_Dir",
+  "group": "lighting",
+  "hid": null
+ },
+ "62256": {
+  "label": "D3_Mode",
+  "group": "lighting",
+  "hid": null
+ },
+ "62257": {
+  "label": "D3_Color",
+  "group": "lighting",
+  "hid": null
+ },
+ "62258": {
+  "label": "D3_Bri+",
+  "group": "lighting",
+  "hid": null
+ },
+ "62259": {
+  "label": "D3_Bri-",
+  "group": "lighting",
+  "hid": null
+ },
+ "62260": {
+  "label": "D3_Spd+",
+  "group": "lighting",
+  "hid": null
+ },
+ "62261": {
+  "label": "D3_Spd-",
+  "group": "lighting",
+  "hid": null
+ },
+ "62262": {
+  "label": "D3_Prev",
+  "group": "lighting",
+  "hid": null
+ },
+ "62263": {
+  "label": "D3_OnOff",
+  "group": "lighting",
+  "hid": null
+ },
+ "62264": {
+  "label": "D3_Dir",
+  "group": "lighting",
+  "hid": null
+ },
+ "62465": {
+  "label": "USB",
+  "group": "wireless",
+  "hid": null
+ },
+ "62466": {
+  "label": "24G",
+  "group": "wireless",
+  "hid": null
+ },
+ "62467": {
+  "label": "BLE1",
+  "group": "wireless",
+  "hid": null
+ },
+ "62468": {
+  "label": "BLE2",
+  "group": "wireless",
+  "hid": null
+ },
+ "62469": {
+  "label": "BLE3",
+  "group": "wireless",
+  "hid": null
+ },
+ "62470": {
+  "label": "Reset",
+  "group": "wireless",
+  "hid": null
+ },
+ "62471": {
+  "label": "Bat",
+  "group": "wireless",
+  "hid": null
+ },
+ "62720": {
+  "label": "M0",
+  "group": "macro",
+  "hid": null
+ },
+ "62721": {
+  "label": "M1",
+  "group": "macro",
+  "hid": null
+ },
+ "62722": {
+  "label": "M2",
+  "group": "macro",
+  "hid": null
+ },
+ "62723": {
+  "label": "M3",
+  "group": "macro",
+  "hid": null
+ },
+ "62724": {
+  "label": "M4",
+  "group": "macro",
+  "hid": null
+ },
+ "62725": {
+  "label": "M5",
+  "group": "macro",
+  "hid": null
+ },
+ "62726": {
+  "label": "M6",
+  "group": "macro",
+  "hid": null
+ },
+ "62727": {
+  "label": "M7",
+  "group": "macro",
+  "hid": null
+ },
+ "62728": {
+  "label": "M8",
+  "group": "macro",
+  "hid": null
+ },
+ "62729": {
+  "label": "M9",
+  "group": "macro",
+  "hid": null
+ },
+ "62730": {
+  "label": "M10",
+  "group": "macro",
+  "hid": null
+ },
+ "62731": {
+  "label": "M11",
+  "group": "macro",
+  "hid": null
+ },
+ "62732": {
+  "label": "M12",
+  "group": "macro",
+  "hid": null
+ },
+ "62733": {
+  "label": "M13",
+  "group": "macro",
+  "hid": null
+ },
+ "62734": {
+  "label": "M14",
+  "group": "macro",
+  "hid": null
+ },
+ "62735": {
+  "label": "M15",
+  "group": "macro",
+  "hid": null
+ }
+}

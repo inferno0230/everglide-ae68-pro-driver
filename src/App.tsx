@@ -4,9 +4,14 @@ import { useDevice } from "@/store/device";
 import { Sidebar, type SectionId } from "@/components/Sidebar";
 import { TooltipProvider, Button, Badge } from "@/components/ui";
 import { Connect } from "@/sections/Connect";
+import { CalibrationSection } from "@/sections/Calibration";
 import { DeviceSection } from "@/sections/Device";
 
 const TITLES: Record<SectionId, { title: string; blurb: string }> = {
+  calibration: {
+    title: "Calibration",
+    blurb: "Teach the board the true travel range of every switch.",
+  },
   device: {
     title: "Device",
     blurb: "Firmware, capabilities and lighting topology.",
@@ -14,12 +19,22 @@ const TITLES: Record<SectionId, { title: string; blurb: string }> = {
 };
 
 export default function App() {
-  const { status, init, disconnect, simulated } = useDevice();
-  const [section, setSection] = React.useState<SectionId>("device");
+  const { status, init, dirty, disconnect, simulated } = useDevice();
+  const [section, setSection] = React.useState<SectionId>("calibration");
 
   React.useEffect(() => {
     void init();
   }, [init]);
+
+  // The one thing that must never be lost silently: RAM-only changes die with
+  // the USB connection, so leaving with unsaved work gets the browser's own
+  // confirmation.
+  React.useEffect(() => {
+    if (dirty.size === 0) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty.size]);
 
   const connected = status === "connected";
 
@@ -85,6 +100,8 @@ export default function App() {
 
 function Section({ id }: { id: SectionId }) {
   switch (id) {
+    case "calibration":
+      return <CalibrationSection />;
     case "device":
       return <DeviceSection />;
     default:
