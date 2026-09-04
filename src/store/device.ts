@@ -4,8 +4,14 @@ import { Keyboard, type DeviceSnapshot } from "@/hid/keyboard";
 import { createSimulatedDevice } from "@/hid/simulator";
 import type { Performance } from "@/hid/protocol/performance";
 import type { LightingBase, PaletteSlot, Rgb } from "@/hid/protocol/lighting";
+import type {
+  HigherKeyConfig,
+  HigherKeyRecord,
+  KeyRef,
+} from "@/hid/protocol/higherkey";
 import {
   AxisKind,
+  HigherKeyMode,
   KeyMode,
   SaveTarget,
   LAYER_COUNT,
@@ -51,6 +57,13 @@ interface DeviceState {
    */
   lightColors: Record<number, Map<string, Rgb>>;
 
+  /**
+   * Advanced keys, keyed by `row:col` — only the keys that actually have one.
+   * The board has no "list the configured keys" call, so this map is built by
+   * asking all 68, exactly as the vendor's own app does.
+   */
+  higher: Map<string, HigherKeyRecord>;
+
   selection: Set<string>;
   layer: number;
   dirty: Set<DirtyTarget>;
@@ -91,6 +104,8 @@ interface DeviceState {
   writeKeycode: (row: number, col: number, keycode: number) => Promise<void>;
   writeLighting: (area: number, patch: Partial<LightingBase>) => Promise<void>;
   writePalette: (area: number, slots: PaletteSlot[]) => Promise<void>;
+  writeHigherKey: (key: KeyRef, config: HigherKeyConfig) => Promise<void>;
+  clearHigherKeys: (keys: readonly KeyRef[]) => Promise<void>;
   /** Pin LEDs in an area to a colour, or hand them back to its effect. */
   paintLights: (
     area: number,
@@ -125,6 +140,7 @@ export const useDevice = create<DeviceState>((set, get) => ({
   lighting: {},
   palette: {},
   lightColors: {},
+  higher: new Map(),
   selection: new Set(),
   layer: 0,
   dirty: new Set(),
@@ -173,6 +189,7 @@ export const useDevice = create<DeviceState>((set, get) => ({
       lighting: {},
       palette: {},
       lightColors: {},
+      higher: new Map(),
       selection: new Set(),
       dirty: new Set(),
       clamped: new Set(),
@@ -325,6 +342,85 @@ export const useDevice = create<DeviceState>((set, get) => ({
     }
   },
 
+  /**
+   * Write one advanced key. Pair modes carry their partner in `data.other`,
+   * and the driver sends both packets, so the refresh has to cover both keys.
+   *
+   * A pair is two records that name each other, and the board will happily
+   * hold half of one. Rebinding either end therefore has to clear whatever it
+   * used to point at, or the board keeps a record referring to a key that no
+   * longer refers back.
+   */
+  async writeHigherKey(key, config) {
+    const newPartner =
+      "data" in config && "other" in config.data ? config.data.other : null;
+    const orphans = [
+      partnerOf(get().higher, key),
+      newPartner ? partnerOf(get().higher, newPartner) : null,
+    ].filter(
+      (ref): ref is KeyRef =>
+        ref !== null &&
+        !sameKey(ref, key) &&
+        !(newPartner !== null && sameKey(ref, newPartner)),
+    );
+
+    set({ busy: true });
+    try {
+      switch (config.mode) {
+        case HigherKeyMode.None:
+          await keyboard.clearHigherKey(key);
+          break;
+        case HigherKeyMode.DKS:
+          await keyboard.setDks(key, config.data);
+          break;
+        case HigherKeyMode.MPT:
+          await keyboard.setMpt(key, config.data);
+          break;
+        case HigherKeyMode.MT:
+          await keyboard.setMt(key, config.data);
+          break;
+        case HigherKeyMode.TGL:
+          await keyboard.setTgl(key, config.data);
+          break;
+        case HigherKeyMode.END:
+          await keyboard.setEnd(key, config.data);
+          break;
+        case HigherKeyMode.SOCD:
+          await keyboard.setSocd(key, config.data);
+          break;
+        case HigherKeyMode.RS:
+          await keyboard.setRs(key, config.data);
+          break;
+      }
+      for (const orphan of orphans) await keyboard.clearHigherKey(orphan);
+      await refreshHigher([key, ...(newPartner ? [newPartner] : []), ...orphans]);
+      set({ dirty: withDirty(get().dirty, SaveTarget.HigherKey) });
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false });
+    }
+  },
+
+  async clearHigherKeys(keys) {
+    // Clearing one half of a pair has to clear the other, for the same reason.
+    const all = [...keys];
+    for (const key of keys) {
+      const partner = partnerOf(get().higher, key);
+      if (partner && !all.some((k) => sameKey(k, partner))) all.push(partner);
+    }
+    set({ busy: true });
+    try {
+      for (const key of all) await keyboard.clearHigherKey(key);
+      await refreshHigher(all);
+      set({ dirty: withDirty(get().dirty, SaveTarget.HigherKey) });
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false });
+    }
+  },
+
   async save() {
     if (get().dirty.size === 0) return;
     set({ saving: true });
@@ -412,6 +508,37 @@ function differs(wanted: Performance, stored: Performance): boolean {
   });
 }
 
+const sameKey = (a: KeyRef, b: KeyRef): boolean =>
+  a.row === b.row && a.col === b.col;
+
+/** The key this one is currently paired with, if it is in a pair mode. */
+function partnerOf(
+  higher: ReadonlyMap<string, HigherKeyRecord>,
+  key: KeyRef,
+): KeyRef | null {
+  const record = higher.get(keyId(key.row, key.col));
+  if (!record || !("data" in record) || !("other" in record.data)) return null;
+  return record.data.other;
+}
+
+/**
+ * Re-read some keys' advanced config and fold the result into the map.
+ *
+ * The reply is the truth here as everywhere else: the board answers with the
+ * record it actually holds, and a key that came back NONE leaves the map so
+ * "configured" stays a simple membership test.
+ */
+async function refreshHigher(keys: readonly KeyRef[]): Promise<void> {
+  const higher = new Map(useDevice.getState().higher);
+  for (const key of keys) {
+    const record = await keyboard.higherKey(key);
+    const id = keyId(key.row, key.col);
+    if (!record || record.mode === HigherKeyMode.None) higher.delete(id);
+    else higher.set(id, record);
+  }
+  useDevice.setState({ higher });
+}
+
 async function open(hid: HIDDevice, simulated: boolean): Promise<void> {
   const set = useDevice.setState;
   set({ status: "connecting", error: null, simulated });
@@ -455,6 +582,16 @@ async function reload(): Promise<void> {
     lightColors[zone.index] = await keyboard.customColors(zone.index, zone);
   }
 
+  // 68 reads, one per key. There is no bulk query; the vendor's app sweeps the
+  // whole matrix on entering its Advanced Key page for exactly this reason.
+  const higher = new Map<string, HigherKeyRecord>();
+  for (const key of snapshot.keys) {
+    const record = await keyboard.higherKey(key);
+    if (record && record.mode !== HigherKeyMode.None) {
+      higher.set(keyId(key.row, key.col), record);
+    }
+  }
+
   set({
     snapshot,
     keymap,
@@ -462,6 +599,7 @@ async function reload(): Promise<void> {
     lighting,
     palette,
     lightColors,
+    higher,
     clamped: new Set(),
   });
 }

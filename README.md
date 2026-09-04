@@ -16,6 +16,8 @@ account, telemetry, or remote configuration service required.
 - View live switch travel for all 68 keys.
 - Remap four layers: Main, Fn1, Fn2, and Fn3.
 - Assign keyboard, media, mouse, control, lighting, and gamepad keycodes.
+- Configure DKS, MPT, tap-or-hold (MT), Toggle, End Trigger, SOCD, and
+  Rappy-Snappy.
 - Run and monitor full-key switch calibration.
 - Control keyboard and bottom-lighting effects, brightness, speed, direction,
   and palette.
@@ -90,6 +92,12 @@ preview. Drag to paint and right-click an address to return it to the active
 effect. The keyboard supports interactive modes L18–L20: pressed region,
 vertical column, and water-ripple reactions.
 
+### Advanced keys
+
+Select a key and configure DKS, MPT, tap-or-hold (MT), Toggle, End Trigger,
+SOCD, or Rappy-Snappy. Pair-based modes update both involved keys together.
+Review the draft and confirm it before saving the result to flash.
+
 ### Calibration
 
 Start calibration, press every key fully down, and allow each key to return
@@ -106,6 +114,7 @@ calibration from the sidebar.
 | Four-layer keymap | Working |
 | Keyboard and bottom RGB | Working |
 | Per-key/per-LED colour | Working |
+| Advanced key behaviours | Working |
 | Calibration | Working |
 | Simulated device | Working |
 

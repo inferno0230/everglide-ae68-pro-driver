@@ -2,6 +2,7 @@ import {
   Gauge,
   Keyboard as KeyboardIcon,
   Lightbulb,
+  Layers,
   Cpu,
   Crosshair,
   HardDriveDownload,
@@ -19,6 +20,7 @@ const TARGET_NAMES: Partial<Record<DirtyTarget, string>> = {
   [SaveTarget.Lighting]: "lighting",
   [SaveTarget.Layout]: "keymap",
   [SaveTarget.Calibration]: "calibration",
+  [SaveTarget.HigherKey]: "advanced keys",
 };
 
 const describeTargets = (dirty: ReadonlySet<DirtyTarget>): string =>
@@ -28,6 +30,7 @@ export type SectionId =
   | "performance"
   | "keymap"
   | "lighting"
+  | "advanced"
   | "calibration"
   | "device";
 
@@ -43,6 +46,7 @@ const NAV: NavItem[] = [
   { id: "performance", label: "Performance", icon: Gauge },
   { id: "keymap", label: "Keymap", icon: KeyboardIcon },
   { id: "lighting", label: "Lighting", icon: Lightbulb },
+  { id: "advanced", label: "Advanced keys", icon: Layers },
   { id: "calibration", label: "Calibration", icon: Crosshair },
   { id: "device", label: "Device", icon: Cpu },
 ];

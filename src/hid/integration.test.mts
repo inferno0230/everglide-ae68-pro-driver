@@ -11,8 +11,11 @@ import { Keyboard } from "./keyboard";
 import { createSimulatedDevice } from "./simulator";
 import {
   AxisKind,
+  HigherKeyMode,
   SaveTarget,
+  SocdMode,
 } from "./protocol/constants";
+import { DksPosition, packDksTrigger, unpackDksTrigger } from "./protocol/higherkey";
 import { describe as describeKey } from "./keycodes";
 import { ledIndex, SPACEBAR_LED_COLUMNS } from "./protocol/lighting";
 
@@ -367,6 +370,98 @@ await check("reads four profiles and the active one", () => {
 await check("save targets are accepted", async () => {
   await keyboard.save(SaveTarget.Performance);
   await keyboard.save(SaveTarget.All);
+});
+
+console.log("advanced keys");
+
+// PgUp and PgDn — the two keys with nothing bound to them on this board.
+const A = { row: 3, col: 14 };
+const B = { row: 4, col: 14 };
+
+await check("an untouched key has no advanced behaviour", async () => {
+  const record = await keyboard.higherKey(A);
+  assert.equal(record?.mode, HigherKeyMode.None);
+});
+
+await check("DKS round-trips, position 3 included", async () => {
+  // Positions 0 and 3 — the transcript captured from the vendor's app.
+  const triggers = packDksTrigger([DksPosition.PressMin, DksPosition.HoldBottom]);
+  assert.equal(triggers, 0x19, "0x01 | 0x08 | 0x10");
+
+  await keyboard.setDks(A, {
+    keycodes: [4, 0, 0, 0],
+    triggers: [triggers, 0, 0, 0],
+    minTravel: 1500,
+    maxTravel: 3000,
+  });
+
+  const record = await keyboard.higherKey(A);
+  assert.equal(record?.mode, HigherKeyMode.DKS);
+  if (record?.mode !== HigherKeyMode.DKS) return;
+  assert.deepEqual(record.data.keycodes, [4, 0, 0, 0]);
+  assert.equal(record.data.minTravel, 1500);
+  assert.equal(record.data.maxTravel, 3000);
+  assert.deepEqual(unpackDksTrigger(record.data.triggers[0]), [
+    DksPosition.PressMin,
+    DksPosition.HoldBottom,
+  ]);
+});
+
+await check("MPT keeps its depths in micrometres", async () => {
+  await keyboard.setMpt(A, {
+    keycodes: [75, 0, 0],
+    depths: [500, 1000, 1500],
+  });
+  const record = await keyboard.higherKey(A);
+  if (record?.mode !== HigherKeyMode.MPT) throw new Error("not MPT");
+  assert.deepEqual(record.data.depths, [500, 1000, 1500]);
+});
+
+await check("MT, TGL and END round-trip their timings", async () => {
+  await keyboard.setMt(A, { tap: 75, hold: 224, holdTime: 200 });
+  let record = await keyboard.higherKey(A);
+  if (record?.mode !== HigherKeyMode.MT) throw new Error("not MT");
+  assert.equal(record.data.holdTime, 200);
+
+  await keyboard.setTgl(A, { keycode: 75, time: 0 });
+  record = await keyboard.higherKey(A);
+  if (record?.mode !== HigherKeyMode.TGL) throw new Error("not TGL");
+  assert.equal(record.data.keycode, 75);
+
+  await keyboard.setEnd(A, { keycodes: [75, 78], delay: 12 });
+  record = await keyboard.higherKey(A);
+  if (record?.mode !== HigherKeyMode.END) throw new Error("not END");
+  assert.deepEqual(record.data.keycodes, [75, 78]);
+  assert.equal(record.data.delay, 12);
+});
+
+await check("SOCD writes both keys, with the keycodes swapped", async () => {
+  await keyboard.setSocd(A, {
+    other: B,
+    keycodes: [75, 78],
+    delay: 0,
+    resolution: SocdMode.PriorityA,
+  });
+
+  const first = await keyboard.higherKey(A);
+  const second = await keyboard.higherKey(B);
+  if (first?.mode !== HigherKeyMode.SOCD || second?.mode !== HigherKeyMode.SOCD) {
+    throw new Error("both keys should carry the pair");
+  }
+  assert.deepEqual(first.data.other, B);
+  assert.deepEqual(second.data.other, A);
+  assert.deepEqual(first.data.keycodes, [75, 78]);
+  assert.deepEqual(second.data.keycodes, [78, 75], "packet B swaps them");
+  // A Priority is asymmetric: 1 to the first key, 2 to the second.
+  assert.equal(first.data.resolution, 1);
+  assert.equal(second.data.resolution, 2);
+});
+
+await check("clearing a key returns it to plain behaviour", async () => {
+  await keyboard.clearHigherKey(A);
+  await keyboard.clearHigherKey(B);
+  assert.equal((await keyboard.higherKey(A))?.mode, HigherKeyMode.None);
+  assert.equal((await keyboard.higherKey(B))?.mode, HigherKeyMode.None);
 });
 
 await check("device reports zone topology and dual lighting", () => {

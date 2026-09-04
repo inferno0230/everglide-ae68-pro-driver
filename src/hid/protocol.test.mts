@@ -9,6 +9,8 @@ import { strict as assert } from "node:assert";
 import { pad64, readU16, u16le, mmToUm } from "./codec";
 import * as layout from "./protocol/layout";
 import * as perf from "./protocol/performance";
+import * as adv from "./protocol/higherkey";
+import { HigherKeyMode, SocdMode } from "./protocol/constants";
 import { decodeCombo, describe as describeKey } from "./keycodes";
 
 let failures = 0;
@@ -106,6 +108,72 @@ check("performance set/parse round-trips", () => {
   const packet = perf.setPerformance(5, 6, written);
   assert.deepEqual(perf.parsePerformance(packet), written);
   assert.deepEqual(Array.from(packet.subarray(0, 4)), [4, 2, 5, 6]);
+});
+
+console.log("advanced keys");
+
+check("DKS position 3 occupies two bits", () => {
+  assert.equal(adv.packDksTrigger([adv.DksPosition.HoldBottom]), 0x18);
+  assert.deepEqual(adv.unpackDksTrigger(0x18), [adv.DksPosition.HoldBottom]);
+  // One of the two bits alone must not decode as position 3.
+  assert.deepEqual(adv.unpackDksTrigger(0x08), []);
+});
+
+check("DKS trigger bitfield round-trips", () => {
+  const positions = [
+    adv.DksPosition.PressMin,
+    adv.DksPosition.HoldBottom,
+    adv.DksPosition.ReleaseMin,
+  ];
+  assert.equal(adv.packDksTrigger(positions), 0x01 | 0x18 | 0x80);
+  assert.deepEqual(adv.unpackDksTrigger(adv.packDksTrigger(positions)), positions);
+});
+
+check("DKS set/parse round-trips", () => {
+  const data: adv.DksConfig = {
+    keycodes: [4, 5, 6, 7],
+    triggers: [0x01, 0x02, 0x18, 0x80],
+    minTravel: 1500,
+    maxTravel: 3000,
+  };
+  const parsed = adv.parseHigherKey(adv.setDks({ row: 2, col: 3 }, data));
+  assert.equal(parsed?.mode, HigherKeyMode.DKS);
+  assert.deepEqual(parsed && "data" in parsed ? parsed.data : null, data);
+  assert.equal(parsed?.row, 2);
+  assert.equal(parsed?.col, 3);
+});
+
+check("SOCD writes two packets with swapped keycodes", () => {
+  const key = { row: 3, col: 1 };
+  const other = { row: 3, col: 3 };
+  const [a, b] = adv.setSocd(key, {
+    other,
+    keycodes: [0x04, 0x07],
+    delay: 20,
+    resolution: SocdMode.PriorityA,
+  });
+
+  // Packet A is registered from `key`, and names `other` as its partner.
+  assert.deepEqual(Array.from(a.subarray(0, 7)), [6, 2, 3, 1, 6, 3, 3]);
+  assert.equal(readU16(a, 7), 0x04);
+  assert.equal(readU16(a, 9), 0x07);
+  assert.equal(a[13], 1, "packet A takes the first resolution byte");
+
+  // Packet B is the mirror: keys swapped, keycodes swapped, other resolution.
+  assert.deepEqual(Array.from(b.subarray(0, 7)), [6, 2, 3, 3, 6, 3, 1]);
+  assert.equal(readU16(b, 7), 0x07);
+  assert.equal(readU16(b, 9), 0x04);
+  assert.equal(b[13], 2, "packet B takes the second resolution byte");
+});
+
+check("Rappy-Snappy mirrors without a resolution byte", () => {
+  const [a, b] = adv.setRs(
+    { row: 3, col: 1 },
+    { other: { row: 3, col: 3 }, keycodes: [0x04, 0x07], delay: 20 },
+  );
+  assert.equal(a[4], HigherKeyMode.RS);
+  assert.equal(readU16(a, 11), 20);
+  assert.equal(readU16(b, 7), 0x07);
 });
 
 console.log("keycodes");

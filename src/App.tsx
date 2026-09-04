@@ -7,6 +7,7 @@ import { Connect } from "@/sections/Connect";
 import { PerformanceSection } from "@/sections/Performance";
 import { KeymapSection } from "@/sections/Keymap";
 import { LightingSection } from "@/sections/Lighting";
+import { AdvancedSection } from "@/sections/Advanced";
 import { CalibrationSection } from "@/sections/Calibration";
 import { DeviceSection } from "@/sections/Device";
 
@@ -22,6 +23,10 @@ const TITLES: Record<SectionId, { title: string; blurb: string }> = {
   lighting: {
     title: "Lighting",
     blurb: "Effect, brightness and the board's eight-slot palette.",
+  },
+  advanced: {
+    title: "Advanced keys",
+    blurb: "Behaviours layered on top of a key: DKS, multi-point, tap/hold, SOCD.",
   },
   calibration: {
     title: "Calibration",
@@ -121,6 +126,8 @@ function Section({ id }: { id: SectionId }) {
       return <KeymapSection />;
     case "lighting":
       return <LightingSection />;
+    case "advanced":
+      return <AdvancedSection />;
     case "calibration":
       return <CalibrationSection />;
     case "device":

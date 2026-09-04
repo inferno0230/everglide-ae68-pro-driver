@@ -169,6 +169,15 @@ export class SimulatedKeyboard {
   private calibrating = false;
 
   /**
+   * Advanced keys, stored as the raw payload the write carried.
+   *
+   * Keeping the bytes rather than a parsed object is deliberate: the parser is
+   * the thing under test, so the simulator must not get a chance to normalise
+   * a field on its way back out.
+   */
+  private higherKeys = new Map<string, Uint8Array>();
+
+  /**
    * Individually pinned colour, per area, indexed the way the board does: the
    * keyboard uses a 21-slot row pitch while the 40-LED bar is contiguous.
    *
@@ -303,6 +312,8 @@ export class SimulatedKeyboard {
         return this.perf(req, reply, put16);
       case Category.Lighting:
         return this.light(req, reply);
+      case Category.HigherKey:
+        return this.higher(req, reply);
       default:
         return reply;
     }
@@ -400,6 +411,23 @@ export class SimulatedKeyboard {
       default:
         return reply;
     }
+  }
+
+  /**
+   * Category 6. A read answers with whatever the last write stored, and mode
+   * NONE clears the entry — the same contract the board honours.
+   */
+  private higher(req: Uint8Array, reply: Uint8Array): Uint8Array {
+    const id = `${req[2]}:${req[3]}`;
+    if (req[1] === 2) {
+      if ((req[4] ?? 0) === 0) this.higherKeys.delete(id);
+      else this.higherKeys.set(id, req.slice(4, 24));
+      reply.set(req.subarray(0, 24));
+      return reply;
+    }
+    const stored = this.higherKeys.get(id);
+    if (stored) reply.set(stored, 4);
+    return reply;
   }
 
   private layout(

@@ -93,6 +93,7 @@ function pinned(
   }
   return out;
 }
+import * as adv from "./protocol/higherkey";
 
 /** Flash writes and calibration take noticeably longer than a read. */
 const SLOW: SendOptions = { timeout: 3000 };
@@ -419,6 +420,56 @@ export class Keyboard {
     await this.transport.send(light.setCapsColor(c));
   }
 
+  // --- advanced keys -------------------------------------------------------
+  //
+  // Verified byte-for-byte on an AE68 Pro, and again against transcripts taken
+  // from the vendor's own Advanced Key page. See .codex/reverse/PROTOCOL.md section 9.
+
+  async higherKey(
+    key: adv.KeyRef,
+  ): Promise<adv.HigherKeyRecord | null> {
+    return adv.parseHigherKey(
+      await this.transport.send(adv.getHigherKey(key), { matchBytes: 4 }),
+    );
+  }
+
+  async clearHigherKey(key: adv.KeyRef): Promise<void> {
+    await this.transport.send(adv.setNone(key));
+  }
+
+  async setDks(key: adv.KeyRef, d: adv.DksConfig): Promise<void> {
+    await this.transport.send(adv.setDks(key, d));
+  }
+
+  async setMpt(key: adv.KeyRef, d: adv.MptConfig): Promise<void> {
+    await this.transport.send(adv.setMpt(key, d));
+  }
+
+  async setMt(key: adv.KeyRef, d: adv.MtConfig): Promise<void> {
+    await this.transport.send(adv.setMt(key, d));
+  }
+
+  async setTgl(key: adv.KeyRef, d: adv.TglConfig): Promise<void> {
+    await this.transport.send(adv.setTgl(key, d));
+  }
+
+  async setEnd(key: adv.KeyRef, d: adv.EndConfig): Promise<void> {
+    await this.transport.send(adv.setEnd(key, d));
+  }
+
+  /** SOCD and Rappy-Snappy each write two packets — one per key of the pair. */
+  async setSocd(key: adv.KeyRef, d: adv.SocdConfig): Promise<void> {
+    for (const packet of adv.setSocd(key, d)) {
+      await this.transport.send(packet, { matchBytes: 4 });
+    }
+  }
+
+  async setRs(key: adv.KeyRef, d: adv.PairConfig): Promise<void> {
+    for (const packet of adv.setRs(key, d)) {
+      await this.transport.send(packet, { matchBytes: 4 });
+    }
+  }
+
   // --- profiles, calibration, save -----------------------------------------
 
   async activeProfile(): Promise<number> {
@@ -449,4 +500,4 @@ export class Keyboard {
 }
 
 export { Transport, codec, Category, AxisKind, SaveTarget, LightArea };
-export { perf, light, layout, device, glob };
+export { perf, light, adv, layout, device, glob };
