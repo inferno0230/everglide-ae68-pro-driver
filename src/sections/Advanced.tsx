@@ -28,6 +28,7 @@ import {
   Select,
   Slider,
   Tooltip,
+  useSliderDraft,
 } from "@/components/ui";
 import { byGroup, capLabel } from "@/hid/keycodes";
 import { HigherKeyMode, SocdMode } from "@/hid/protocol/constants";
@@ -136,11 +137,31 @@ const MODES: ModeInfo[] = [
 const modeInfo = (mode: Mode): ModeInfo =>
   MODES.find((m) => m.value === mode) ?? MODES[0]!;
 
-const SOCD_RESOLUTIONS: ReadonlyArray<{ value: SocdMode; label: string; title: string }> = [
-  { value: SocdMode.LastOverride, label: "Last wins", title: "The most recent press overrides the one already held." },
-  { value: SocdMode.PriorityA, label: "A wins", title: "The first key of the pair always wins." },
-  { value: SocdMode.PriorityB, label: "B wins", title: "The second key of the pair always wins." },
-  { value: SocdMode.Neutralize, label: "Neither", title: "Holding both sends nothing." },
+const SOCD_RESOLUTIONS: ReadonlyArray<{
+  value: SocdMode;
+  label: string;
+  title: string;
+}> = [
+  {
+    value: SocdMode.LastOverride,
+    label: "Last wins",
+    title: "The most recent press overrides the one already held.",
+  },
+  {
+    value: SocdMode.PriorityA,
+    label: "A wins",
+    title: "The first key of the pair always wins.",
+  },
+  {
+    value: SocdMode.PriorityB,
+    label: "B wins",
+    title: "The second key of the pair always wins.",
+  },
+  {
+    value: SocdMode.Neutralize,
+    label: "Neither",
+    title: "Holding both sends nothing.",
+  },
 ];
 
 const refOf = (id: string): KeyRef => {
@@ -371,9 +392,7 @@ export function AdvancedSection() {
             secondary={secondary}
             stored={stored}
             busy={busy}
-            defaultTravel={
-              performance.get(picked[0]!)?.press ?? DEFAULT_TRAVEL
-            }
+            defaultTravel={performance.get(picked[0]!)?.press ?? DEFAULT_TRAVEL}
             keycodeAt={keycodeAt}
             picked={picked}
             onCommit={commit}
@@ -431,10 +450,16 @@ function Editor({
       case HigherKeyMode.MPT:
         return {
           mode,
-          data: { keycodes: [ownKeycode, 0, 0], depths: [...MPT_DEFAULT_DEPTHS] },
+          data: {
+            keycodes: [ownKeycode, 0, 0],
+            depths: [...MPT_DEFAULT_DEPTHS],
+          },
         };
       case HigherKeyMode.MT:
-        return { mode, data: { tap: ownKeycode, hold: 0, holdTime: MT_DEFAULT_TIME } };
+        return {
+          mode,
+          data: { tap: ownKeycode, hold: 0, holdTime: MT_DEFAULT_TIME },
+        };
       case HigherKeyMode.TGL:
         return { mode, data: { keycode: ownKeycode, time: 0 } };
       case HigherKeyMode.END:
@@ -568,7 +593,10 @@ function Editor({
           onChange={(data, resolution) =>
             push({
               mode: HigherKeyMode.SOCD,
-              data: { ...data, resolution: resolution ?? draft.data.resolution },
+              data: {
+                ...data,
+                resolution: resolution ?? draft.data.resolution,
+              },
             })
           }
         />
@@ -601,7 +629,10 @@ function DksEditor({
   busy: boolean;
   onChange: (data: DksConfig) => void;
 }) {
-  const setSlot = (i: number, patch: { keycode?: number; trigger?: number }) => {
+  const setSlot = (
+    i: number,
+    patch: { keycode?: number; trigger?: number },
+  ) => {
     const keycodes = [...data.keycodes] as DksConfig["keycodes"];
     const triggers = [...data.triggers] as DksConfig["triggers"];
     if (patch.keycode !== undefined) keycodes[i] = patch.keycode;
@@ -612,10 +643,7 @@ function DksEditor({
   return (
     <div className="space-y-4 p-4">
       <div className="space-y-2">
-        <TimelineHeader
-          minTravel={data.minTravel}
-          maxTravel={data.maxTravel}
-        />
+        <TimelineHeader minTravel={data.minTravel} maxTravel={data.maxTravel} />
         {data.keycodes.map((keycode, i) => (
           <div key={i} className="flex flex-wrap items-center gap-3">
             <KeycodeSelect
@@ -669,13 +697,41 @@ const POSITIONS: ReadonlyArray<{
   shape: "instant" | "hold";
   describe: (min: string, max: string) => string;
 }> = [
-  { position: DksPosition.PressMin, shape: "instant", describe: (min) => `Pressing past ${min} mm` },
-  { position: DksPosition.HoldBetween, shape: "hold", describe: (min, max) => `Held between ${min} and ${max} mm` },
-  { position: DksPosition.PressMax, shape: "instant", describe: (_, max) => `Pressing past ${max} mm` },
-  { position: DksPosition.HoldBottom, shape: "hold", describe: (_, max) => `Held below ${max} mm` },
-  { position: DksPosition.ReleaseMax, shape: "instant", describe: (_, max) => `Rising past ${max} mm` },
-  { position: DksPosition.ReleaseBetween, shape: "hold", describe: (min, max) => `Rising between ${max} and ${min} mm` },
-  { position: DksPosition.ReleaseMin, shape: "instant", describe: (min) => `Rising past ${min} mm` },
+  {
+    position: DksPosition.PressMin,
+    shape: "instant",
+    describe: (min) => `Pressing past ${min} mm`,
+  },
+  {
+    position: DksPosition.HoldBetween,
+    shape: "hold",
+    describe: (min, max) => `Held between ${min} and ${max} mm`,
+  },
+  {
+    position: DksPosition.PressMax,
+    shape: "instant",
+    describe: (_, max) => `Pressing past ${max} mm`,
+  },
+  {
+    position: DksPosition.HoldBottom,
+    shape: "hold",
+    describe: (_, max) => `Held below ${max} mm`,
+  },
+  {
+    position: DksPosition.ReleaseMax,
+    shape: "instant",
+    describe: (_, max) => `Rising past ${max} mm`,
+  },
+  {
+    position: DksPosition.ReleaseBetween,
+    shape: "hold",
+    describe: (min, max) => `Rising between ${max} and ${min} mm`,
+  },
+  {
+    position: DksPosition.ReleaseMin,
+    shape: "instant",
+    describe: (min) => `Rising past ${min} mm`,
+  },
 ];
 
 /**
@@ -692,7 +748,15 @@ function TimelineHeader({
   minTravel: number;
   maxTravel: number;
 }) {
-  const marks = [mm(minTravel, 2), "", mm(maxTravel, 2), "", mm(maxTravel, 2), "", mm(minTravel, 2)];
+  const marks = [
+    mm(minTravel, 2),
+    "",
+    mm(maxTravel, 2),
+    "",
+    mm(maxTravel, 2),
+    "",
+    mm(minTravel, 2),
+  ];
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="w-40 shrink-0" />
@@ -1047,7 +1111,7 @@ function KeycodeSelect({
   disabled?: boolean;
   allowMouse?: boolean;
   className?: string;
-} & Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange">) {
+} & Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, "id" | "aria-label">) {
   const basic = React.useMemo(() => byGroup("basic"), []);
   const mouse = React.useMemo(() => byGroup("mouse"), []);
 
@@ -1061,34 +1125,37 @@ function KeycodeSelect({
       value={value}
       disabled={disabled}
       className={className}
-      onChange={(e) => onChange(Number(e.target.value))}
+      onValueChange={(next) => onChange(Number(next))}
+      options={[
+        { options: [{ value: 0, label: "— none —" }] },
+        {
+          label: "Letters, numbers and punctuation",
+          options: typing.map((keycode) => ({
+            value: keycode.code,
+            label: keycode.label,
+          })),
+        },
+        {
+          label: "Function, navigation and modifiers",
+          options: rest2.map((keycode) => ({
+            value: keycode.code,
+            label: keycode.label,
+          })),
+        },
+        ...(allowMouse
+          ? [
+              {
+                label: "Mouse",
+                options: mouse.map((keycode) => ({
+                  value: keycode.code,
+                  label: keycode.label,
+                })),
+              },
+            ]
+          : []),
+      ]}
       {...rest}
-    >
-      <option value={0}>— none —</option>
-      <optgroup label="Letters, numbers and punctuation">
-        {typing.map((k) => (
-          <option key={k.code} value={k.code}>
-            {k.label}
-          </option>
-        ))}
-      </optgroup>
-      <optgroup label="Function, navigation and modifiers">
-        {rest2.map((k) => (
-          <option key={k.code} value={k.code}>
-            {k.label}
-          </option>
-        ))}
-      </optgroup>
-      {allowMouse ? (
-        <optgroup label="Mouse">
-          {mouse.map((k) => (
-            <option key={k.code} value={k.code}>
-              {k.label}
-            </option>
-          ))}
-        </optgroup>
-      ) : null}
-    </Select>
+    />
   );
 }
 
@@ -1133,8 +1200,8 @@ function TravelSlider({
   ariaLabel: string;
   onCommit: (value: number) => void;
 }) {
-  const [dragging, setDragging] = React.useState<number | null>(null);
-  const shown = dragging ?? value;
+  const { draft, drag, commit } = useSliderDraft(onCommit);
+  const shown = draft ?? value;
 
   return (
     <div className="flex flex-1 items-center gap-3">
@@ -1144,10 +1211,9 @@ function TravelSlider({
         max={TRAVEL_MAX}
         step={TRAVEL_STEP}
         disabled={disabled}
-        onValueChange={([v]) => setDragging(v ?? TRAVEL_MIN)}
+        onValueChange={([v]) => drag(v ?? TRAVEL_MIN)}
         onValueCommit={([v]) => {
-          setDragging(null);
-          if (v !== undefined) onCommit(v);
+          if (v !== undefined) commit(v);
         }}
         aria-label={ariaLabel}
       />
@@ -1176,8 +1242,8 @@ function MsField({
   disabled: boolean;
   onCommit: (value: number) => void;
 }) {
-  const [dragging, setDragging] = React.useState<number | null>(null);
-  const shown = dragging ?? value;
+  const { draft, drag, commit } = useSliderDraft(onCommit);
+  const shown = draft ?? value;
 
   return (
     <Field
@@ -1191,10 +1257,9 @@ function MsField({
             max={max}
             step={max > 100 ? 10 : 1}
             disabled={disabled}
-            onValueChange={([v]) => setDragging(v ?? 0)}
+            onValueChange={([v]) => drag(v ?? 0)}
             onValueCommit={([v]) => {
-              setDragging(null);
-              if (v !== undefined) onCommit(v);
+              if (v !== undefined) commit(v);
             }}
             aria-label={label}
           />

@@ -15,6 +15,7 @@ import {
   Select,
   Slider,
   Switch,
+  useSliderDraft,
 } from "@/components/ui";
 import {
   EFFECTS,
@@ -51,8 +52,6 @@ export function LightingSection() {
 
   const [area, setArea] = React.useState<number>(LightArea.Keyboard);
   const [showAddressable, setShowAddressable] = React.useState(false);
-  const [brightness, setBrightness] = React.useState<number | null>(null);
-  const [speed, setSpeed] = React.useState<number | null>(null);
   const [brush, setBrush] = React.useState<Rgb>({ r: 255, g: 255, b: 255 });
 
   /**
@@ -79,10 +78,7 @@ export function LightingSection() {
     if (ids.length > 0) void paintLights(area, ids, brush);
   };
 
-  // A fresh area starts from the device's values, not the previous area's drag.
   React.useEffect(() => {
-    setBrightness(null);
-    setSpeed(null);
     stroke.current.clear();
     setStrokeVersion((v) => v + 1);
   }, [area]);
@@ -155,7 +151,9 @@ export function LightingSection() {
                   onPaint={paint}
                   onPaintEnd={commitStroke}
                   onClear={(id) => void paintLights(area, [id], null)}
-                  label={(key) => capLabel(keymap[0]?.[key.row]?.[key.col] ?? 0)}
+                  label={(key) =>
+                    capLabel(keymap[0]?.[key.row]?.[key.col] ?? 0)
+                  }
                   state={(key) => {
                     // A pinned key shows the colour the board is actually holding,
                     // not the effect it is overriding. Keys under the stroke in
@@ -214,34 +212,32 @@ export function LightingSection() {
       {showAddressable ? (
         <Panel>
           <PanelHeader>
-          <span className="flex items-center gap-2">
-            {isKeyboard ? "Per-key colour" : "Per-LED colour"}
-            {areaColors.size > 0 ? (
-              <Badge tone="accent">
-                {areaColors.size} painted
-              </Badge>
-            ) : null}
-          </span>
-          <ConfirmDialog
-            trigger={
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy || areaColors.size === 0}
-              >
-                Clear all
-              </Button>
-            }
-            title={`Clear all ${isKeyboard ? "key" : "light-bar"} colours?`}
-            description="Every custom colour in this lighting area will be handed back to the active effect."
-            confirmLabel="Clear all colours"
-            onConfirm={() =>
-              void paintLights(area, [...areaColors.keys()], null)
-            }
-          />
+            <span className="flex items-center gap-2">
+              {isKeyboard ? "Per-key colour" : "Per-LED colour"}
+              {areaColors.size > 0 ? (
+                <Badge tone="accent">{areaColors.size} painted</Badge>
+              ) : null}
+            </span>
+            <ConfirmDialog
+              trigger={
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy || areaColors.size === 0}
+                >
+                  Clear all
+                </Button>
+              }
+              title={`Clear all ${isKeyboard ? "key" : "light-bar"} colours?`}
+              description="Every custom colour in this lighting area will be handed back to the active effect."
+              confirmLabel="Clear all colours"
+              onConfirm={() =>
+                void paintLights(area, [...areaColors.keys()], null)
+              }
+            />
           </PanelHeader>
 
-        <div className="flex flex-wrap items-center gap-4 p-4">
+          <div className="flex flex-wrap items-center gap-4 p-4">
             <Field
               label="Brush"
               className="shrink-0"
@@ -249,7 +245,9 @@ export function LightingSection() {
                 <div className="flex items-center gap-2">
                   <label
                     className="block h-8 w-14 shrink-0 cursor-pointer rounded-md ring-1 ring-inset ring-line transition-shadow hover:ring-line-strong"
-                    style={{ backgroundColor: `rgb(${brush.r} ${brush.g} ${brush.b})` }}
+                    style={{
+                      backgroundColor: `rgb(${brush.r} ${brush.g} ${brush.b})`,
+                    }}
                   >
                     <span className="sr-only">Brush colour</span>
                     <input
@@ -259,7 +257,11 @@ export function LightingSection() {
                       onChange={(e) => setBrush(fromHex(e.target.value))}
                     />
                   </label>
-                  <Readout value={toHex(brush).toUpperCase()} size="sm" tone="muted" />
+                  <Readout
+                    value={toHex(brush).toUpperCase()}
+                    size="sm"
+                    tone="muted"
+                  />
                 </div>
               }
             />
@@ -276,22 +278,27 @@ export function LightingSection() {
                         key={i}
                         type="button"
                         aria-label={`Use palette slot ${i + 1}`}
-                        onClick={() => setBrush({ r: slot.r, g: slot.g, b: slot.b })}
+                        onClick={() =>
+                          setBrush({ r: slot.r, g: slot.g, b: slot.b })
+                        }
                         className="h-8 w-8 rounded-md ring-1 ring-inset ring-line transition-shadow hover:ring-line-strong"
-                        style={{ backgroundColor: `rgb(${slot.r} ${slot.g} ${slot.b})` }}
+                        style={{
+                          backgroundColor: `rgb(${slot.r} ${slot.g} ${slot.b})`,
+                        }}
                       />
                     ),
                   )}
                 </div>
               }
             />
-        </div>
+          </div>
 
-        <p className="border-t border-line px-3 py-2 text-2xs text-fg-subtle">
-          A painted {isKeyboard ? "key" : "LED"} holds its colour through every
-          effect and ignores the animation. It lives in the same flash region as
-          the rest of lighting, so it is gone on unplug until you save.
-        </p>
+          <p className="border-t border-line px-3 py-2 text-2xs text-fg-subtle">
+            A painted {isKeyboard ? "key" : "LED"} holds its colour through
+            every effect and ignores the animation. It lives in the same flash
+            region as the rest of lighting, so it is gone on unplug until you
+            save.
+          </p>
         </Panel>
       ) : null}
 
@@ -354,21 +361,19 @@ export function LightingSection() {
                   ? cyclesHue
                     ? "Held, but cycling hues — the palette's cycle slot is selected."
                     : "A single colour, held. Pick it from the palette."
-                  : effect?.description ??
-                    `${effect ? effectLabel(effect.id, effect.name) : "Unknown"} animates on the board itself.`
+                  : (effect?.description ??
+                    `${effect ? effectLabel(effect.id, effect.name) : "Unknown"} animates on the board itself.`)
               }
               control={
                 <Select
                   id={`effect-${area}`}
                   value={base.effect}
-                  onChange={(e) => set({ effect: Number(e.target.value) })}
-                >
-                  {effects.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {effectLabel(e.id, e.name)}
-                    </option>
-                  ))}
-                </Select>
+                  onValueChange={(value) => set({ effect: Number(value) })}
+                  options={effects.map((effect) => ({
+                    value: effect.id,
+                    label: effectLabel(effect.id, effect.name),
+                  }))}
+                />
               }
             />
 
@@ -376,13 +381,10 @@ export function LightingSection() {
               label="Brightness"
               control={
                 <SliderRow
-                  value={brightness ?? base.brightness}
+                  key={area}
+                  value={base.brightness}
                   revision={revision.get(`lighting:${area}`) ?? 0}
-                  onDrag={setBrightness}
-                  onCommit={(v) => {
-                    setBrightness(null);
-                    set({ brightness: v });
-                  }}
+                  onCommit={(v) => writeLighting(area, { brightness: v })}
                   ariaLabel="Brightness"
                 />
               }
@@ -392,14 +394,11 @@ export function LightingSection() {
               label="Speed"
               control={
                 <SliderRow
-                  value={speed ?? base.speed}
+                  key={area}
+                  value={base.speed}
                   max={SPEED_MAX}
                   revision={revision.get(`lighting:${area}`) ?? 0}
-                  onDrag={setSpeed}
-                  onCommit={(v) => {
-                    setSpeed(null);
-                    set({ speed: v });
-                  }}
+                  onCommit={(v) => writeLighting(area, { speed: v })}
                   ariaLabel="Speed"
                 />
               }
@@ -484,7 +483,6 @@ function SliderRow({
   value,
   max = 100,
   revision,
-  onDrag,
   onCommit,
   ariaLabel,
 }: {
@@ -492,25 +490,27 @@ function SliderRow({
   max?: number;
   /** Bumped when the board answers for this zone; drives the settle wash. */
   revision: number;
-  onDrag: (v: number) => void;
-  onCommit: (v: number) => void;
+  onCommit: (v: number) => Promise<void>;
   ariaLabel: string;
 }) {
+  const { draft, drag, commit } = useSliderDraft(onCommit);
+  const shown = draft ?? value;
+
   return (
     <div className="flex items-center gap-3">
       <Slider
-        value={[value]}
+        value={[shown]}
         min={0}
         max={max}
         step={5}
         aria-label={ariaLabel}
-        onValueChange={([v]) => onDrag(v ?? 0)}
+        onValueChange={([v]) => drag(v ?? 0)}
         onValueCommit={([v]) => {
-          if (v !== undefined) onCommit(v);
+          if (v !== undefined) commit(v);
         }}
       />
       <Settle revision={revision} className="shrink-0">
-        <Readout className="w-10 text-right" value={String(value)} unit="%" />
+        <Readout className="w-10 text-right" value={String(shown)} unit="%" />
       </Settle>
     </div>
   );
@@ -537,12 +537,12 @@ function SlotSwatch({
         type="button"
         onClick={onSelect}
         aria-pressed={active}
-        aria-label={isRgbSlot ? "Cycling hue slot" : `Palette slot ${index + 1}`}
+        aria-label={
+          isRgbSlot ? "Cycling hue slot" : `Palette slot ${index + 1}`
+        }
         className={cn(
           "block h-11 w-full rounded-md ring-1 ring-inset transition-shadow",
-          active
-            ? "ring-2 ring-accent"
-            : "ring-line hover:ring-line-strong",
+          active ? "ring-2 ring-accent" : "ring-line hover:ring-line-strong",
         )}
         style={
           isRgbSlot

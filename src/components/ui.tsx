@@ -8,10 +8,11 @@
 
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import * as SelectPrimitive from "@radix-ui/react-select";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // --- button ----------------------------------------------------------------
@@ -29,8 +30,7 @@ const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
     "bg-transparent text-fg-muted border-transparent hover:bg-canvas-overlay hover:text-fg",
 };
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: "sm" | "md";
 }
@@ -130,21 +130,53 @@ export function Slider({
       )}
       {...props}
     >
-      <SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-canvas-overlay">
+      <SliderPrimitive.Track className="relative h-0.5 w-full grow overflow-hidden rounded-full bg-line">
         <SliderPrimitive.Range className="absolute h-full bg-accent" />
       </SliderPrimitive.Track>
       {(props.value ?? props.defaultValue ?? [0]).map((_, i) => (
         <SliderPrimitive.Thumb
           key={i}
           className={cn(
-            "block h-3.5 w-3.5 rounded-full bg-fg ring-1 ring-line-strong",
-            "transition-shadow hover:ring-accent",
+            "block h-3.5 w-1 rounded-full bg-accent",
+            "transition-transform hover:scale-y-125 active:scale-y-125",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
           )}
         />
       ))}
     </SliderPrimitive.Root>
   );
+}
+
+/**
+ * Holds the dragged value across the write instead of dropping it on release.
+ *
+ * A commit is a round trip to the board, and the store only takes the new
+ * value once the board answers. Clearing the local value on release would
+ * show the *old* one for the length of that trip — the slider snaps back,
+ * then jumps forward when the answer lands. So the draft stays until the
+ * commit settles; a fresh drag invalidates any commit still in flight, so a
+ * late answer can never yank the thumb out from under the pointer.
+ */
+export function useSliderDraft(
+  onCommit: (value: number) => void | Promise<void>,
+) {
+  const [draft, setDraft] = React.useState<number | null>(null);
+  const generation = React.useRef(0);
+
+  const drag = (value: number) => {
+    generation.current += 1;
+    setDraft(value);
+  };
+
+  const commit = (value: number) => {
+    const mine = ++generation.current;
+    setDraft(value);
+    void Promise.resolve(onCommit(value)).finally(() => {
+      if (generation.current === mine) setDraft(null);
+    });
+  };
+
+  return { draft, drag, commit };
 }
 
 // --- switch ----------------------------------------------------------------
@@ -232,35 +264,106 @@ export function Segmented<T extends string | number>({
 
 // --- select ----------------------------------------------------------------
 
-/**
- * The chevron is a real icon, not a background image.
- *
- * An inline SVG data URI cannot live in a class string: it contains spaces, so
- * clsx splits it into a dozen junk class names and the arrow never renders —
- * and twMerge then drops the neighbouring `bg-canvas-overlay` as a conflicting
- * `bg-*` utility, leaving the control transparent and its native popup white.
- */
+export interface SelectOption {
+  value: string | number;
+  label: string;
+  disabled?: boolean | undefined;
+}
+
+export interface SelectGroup {
+  label?: string;
+  options: readonly SelectOption[];
+}
+
 export function Select({
+  value,
+  onValueChange,
+  options,
+  disabled,
+  id,
+  "aria-label": ariaLabel,
   className,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+}: {
+  value: string | number;
+  onValueChange: (value: string) => void;
+  options: readonly SelectOption[] | readonly SelectGroup[];
+  disabled?: boolean | undefined;
+  id?: string | undefined;
+  "aria-label"?: string | undefined;
+  className?: string | undefined;
+}) {
+  const groups: readonly SelectGroup[] =
+    options.length > 0 && "options" in options[0]!
+      ? (options as readonly SelectGroup[])
+      : [{ options: options as readonly SelectOption[] }];
+
   return (
-    <div className="relative">
-      <select
+    <SelectPrimitive.Root
+      value={String(value)}
+      onValueChange={onValueChange}
+      {...(disabled !== undefined ? { disabled } : {})}
+    >
+      <SelectPrimitive.Trigger
+        id={id}
+        aria-label={ariaLabel}
         className={cn(
-          "h-7 w-full appearance-none rounded-md border border-line bg-canvas-overlay",
-          "px-2 pr-7 text-xs text-fg transition-colors",
-          "hover:border-line-strong focus:border-accent",
+          "flex h-7 w-full cursor-pointer items-center justify-between gap-2 rounded-md bg-canvas-overlay px-2",
+          "text-xs text-fg ring-1 ring-inset ring-line outline-none transition-shadow",
+          "hover:ring-line-strong focus-visible:ring-accent data-[state=open]:ring-accent",
+          "disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
-        {...props}
-      />
-      <ChevronDown
-        size={14}
-        aria-hidden
-        className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-fg-muted"
-      />
-    </div>
+      >
+        <SelectPrimitive.Value />
+        <SelectPrimitive.Icon asChild>
+          <ChevronDown size={14} className="shrink-0 text-fg-muted" />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content
+          position="popper"
+          sideOffset={4}
+          collisionPadding={8}
+          className="z-50 max-h-72 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md bg-canvas-raised p-1 text-xs text-fg ring-1 ring-line shadow-xl"
+        >
+          <SelectPrimitive.ScrollUpButton className="flex h-4 cursor-default items-center justify-center text-fg-subtle">
+            <ChevronUp size={13} />
+          </SelectPrimitive.ScrollUpButton>
+          <SelectPrimitive.Viewport className="scrollbar-thin-visible overflow-y-auto pr-1">
+            {groups.map((group, groupIndex) => (
+              <SelectPrimitive.Group key={group.label ?? groupIndex}>
+                {group.label ? (
+                  <SelectPrimitive.Label className="px-2 py-1.5 text-3xs font-semibold tracking-wide text-fg-subtle uppercase">
+                    {group.label}
+                  </SelectPrimitive.Label>
+                ) : null}
+                {group.options.map((option) => (
+                  <SelectPrimitive.Item
+                    key={String(option.value)}
+                    value={String(option.value)}
+                    {...(option.disabled !== undefined
+                      ? { disabled: option.disabled }
+                      : {})}
+                    className="relative flex h-7 cursor-pointer select-none items-center rounded-sm pr-8 pl-2 text-fg-muted outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-accent-subtle data-[highlighted]:text-fg"
+                  >
+                    <SelectPrimitive.ItemText>
+                      {option.label}
+                    </SelectPrimitive.ItemText>
+                    <SelectPrimitive.ItemIndicator className="absolute right-2 text-accent">
+                      <Check size={13} strokeWidth={2} />
+                    </SelectPrimitive.ItemIndicator>
+                  </SelectPrimitive.Item>
+                ))}
+              </SelectPrimitive.Group>
+            ))}
+          </SelectPrimitive.Viewport>
+          <SelectPrimitive.ScrollDownButton className="flex h-4 cursor-default items-center justify-center text-fg-subtle">
+            <ChevronDown size={13} />
+          </SelectPrimitive.ScrollDownButton>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
   );
 }
 

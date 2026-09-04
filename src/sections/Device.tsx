@@ -122,14 +122,15 @@ export function DeviceSection() {
               <Select
                 id="rate"
                 value={snapshot.reportRateHz}
-                onChange={(e) => void setReportRate(Number(e.target.value))}
-              >
-                {REPORT_RATES.map((r) => (
-                  <option key={r.code} value={r.hz}>
-                    {r.hz >= 1000 ? `${r.hz / 1000} kHz` : `${r.hz} Hz`}
-                  </option>
-                ))}
-              </Select>
+                onValueChange={(value) => void setReportRate(Number(value))}
+                options={REPORT_RATES.map((rate) => ({
+                  value: rate.hz,
+                  label:
+                    rate.hz >= 1000
+                      ? `${rate.hz / 1000} kHz`
+                      : `${rate.hz} Hz`,
+                }))}
+              />
             }
           />
           <ProfileNames onRename={renameProfile} profiles={snapshot.profiles} />

@@ -105,14 +105,12 @@ export function Sidebar({
           <Select
             id="profile"
             value={snapshot.activeProfile}
-            onChange={(e) => void switchProfile(Number(e.target.value))}
-          >
-            {snapshot.profiles.map((p) => (
-              <option key={p.index} value={p.index}>
-                {p.name || `Config ${p.index + 1}`}
-              </option>
-            ))}
-          </Select>
+            onValueChange={(value) => void switchProfile(Number(value))}
+            options={snapshot.profiles.map((profile) => ({
+              value: profile.index,
+              label: profile.name || `Config ${profile.index + 1}`,
+            }))}
+          />
         </div>
       ) : null}
 

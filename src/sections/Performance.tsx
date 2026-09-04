@@ -15,6 +15,7 @@ import {
   Slider,
   Switch,
   Tooltip,
+  useSliderDraft,
 } from "@/components/ui";
 import { capLabel } from "@/hid/keycodes";
 import type { Performance as PerfRecord } from "@/hid/protocol/performance";
@@ -79,13 +80,10 @@ export function PerformanceSection() {
     [selected, performance],
   );
 
-  const label = React.useCallback(
-    (key: KeyGeometry) => {
-      const kc = useDevice.getState().keymap[0]?.[key.row]?.[key.col] ?? 0;
-      return capLabel(kc);
-    },
-    [],
-  );
+  const label = React.useCallback((key: KeyGeometry) => {
+    const kc = useDevice.getState().keymap[0]?.[key.row]?.[key.col] ?? 0;
+    return capLabel(kc);
+  }, []);
 
   const state = React.useCallback(
     (key: KeyGeometry) => {
@@ -197,7 +195,7 @@ export function PerformanceSection() {
           // multi-key commit still reads as the board replying once.
           revision={Math.max(0, ...selected.map((id) => revision.get(id) ?? 0))}
           clamped={selected.some((id) => clamped.has(id))}
-          onChange={(patch) => void writePerformance(selected, patch)}
+          onChange={(patch) => writePerformance(selected, patch)}
         />
       )}
     </div>
@@ -215,7 +213,10 @@ function PerformanceKeyGuide() {
         Performance settings appear in the corners of each key.
       </p>
 
-      <div className="relative mx-auto mt-3 h-16 w-16 rounded-[4px] bg-canvas-overlay text-3xs ring-1 ring-inset ring-line" aria-hidden>
+      <div
+        className="relative mx-auto mt-3 h-16 w-16 rounded-[4px] bg-canvas-overlay text-3xs ring-1 ring-inset ring-line"
+        aria-hidden
+      >
         <span className="absolute top-1.5 left-1.5 text-[10px] font-normal text-fg-subtle">
           0.10
         </span>
@@ -321,7 +322,7 @@ function Editor({
   busy: boolean;
   revision: number;
   clamped: boolean;
-  onChange: (patch: Partial<PerfRecord>) => void;
+  onChange: (patch: Partial<PerfRecord>) => Promise<void>;
 }) {
   const [section, setSection] = React.useState<"trigger" | "dead-zone">(
     "trigger",
@@ -359,7 +360,8 @@ function Editor({
             <div>
               <p className="text-xs font-semibold text-fg">Trigger mode</p>
               <p className="mt-0.5 text-2xs text-fg-muted">
-                Choose a fixed actuation point or movement-sensitive rapid trigger.
+                Choose a fixed actuation point or movement-sensitive rapid
+                trigger.
               </p>
             </div>
             <Segmented
@@ -483,16 +485,14 @@ function TravelControl({
   revision: number;
   clamped: boolean;
   disabled: boolean;
-  onCommit: (value: number) => void;
+  onCommit: (value: number) => Promise<void>;
 }) {
   // Track the drag locally so the slider stays smooth, but only write to the
   // device on release — every write is a round trip to the board.
-  const [dragging, setDragging] = React.useState<number | null>(null);
-  const shown = dragging ?? value;
+  const { draft, drag, commit } = useSliderDraft(onCommit);
+  const shown = draft ?? value;
   const commitDraft = () => {
-    if (dragging === null) return;
-    setDragging(null);
-    onCommit(dragging);
+    if (draft !== null) commit(draft);
   };
 
   return (
@@ -507,10 +507,9 @@ function TravelControl({
             max={max}
             step={step}
             disabled={disabled || value === undefined}
-            onValueChange={([v]) => setDragging(v ?? min)}
+            onValueChange={([v]) => drag(v ?? min)}
             onValueCommit={([v]) => {
-              setDragging(null);
-              if (v !== undefined) onCommit(v);
+              if (v !== undefined) commit(v);
             }}
             aria-label={label}
           />
@@ -533,7 +532,7 @@ function TravelControl({
                   const next = event.currentTarget.valueAsNumber;
                   if (!Number.isFinite(next)) return;
                   const micrometres = Math.round((next * 1000) / step) * step;
-                  setDragging(Math.min(max, Math.max(min, micrometres)));
+                  drag(Math.min(max, Math.max(min, micrometres)));
                 }}
                 onBlur={commitDraft}
                 onKeyDown={(event) => {
@@ -575,7 +574,8 @@ function sharedRecord(
   ] as const;
 
   for (const field of travelFields) {
-    if (present.every((r) => r[field] === first[field])) out[field] = first[field];
+    if (present.every((r) => r[field] === first[field]))
+      out[field] = first[field];
   }
 
   // Mode is the exception: the segmented control has to sit somewhere, so a

@@ -163,6 +163,26 @@
   }
 }
 
+/*
+ * Radix injects its own unlayered stylesheet at runtime that hides the
+ * select viewport's scrollbar outright (scrollbar-width: none,
+ * ::-webkit-scrollbar{display:none}). Left that way, a dropdown with more
+ * options than fit its max height looks like a short, complete list
+ * instead of a scrollable one. This override must stay unlayered too —
+ * anything inside @layer loses to unlayered CSS regardless of specificity
+ * — and the extra class selector outranks Radix's plain attribute one
+ * regardless of injection order.
+ */
+[data-radix-select-viewport].scrollbar-thin-visible {
+  scrollbar-width: thin;
+  -ms-overflow-style: auto;
+}
+
+[data-radix-select-viewport].scrollbar-thin-visible::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+}
+
 @layer utilities {
   /*
    * An advanced-key badge wipes up from the cap edge it is anchored to, rather
