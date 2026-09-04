@@ -2,6 +2,7 @@ import { useDevice } from "@/store/device";
 import {
   Badge,
   Button,
+  ConfirmDialog,
   Field,
   Panel,
   PanelHeader,
@@ -145,18 +146,20 @@ export function DeviceSection() {
             resetting settings will not force you to recalibrate.
           </p>
           <div className="flex gap-2">
-            <Button
-              variant="danger"
-              onClick={() => void factoryReset(SaveTarget.Performance)}
-            >
-              Reset actuation
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => void factoryReset(SaveTarget.Layout)}
-            >
-              Reset keymap
-            </Button>
+            <ConfirmDialog
+              trigger={<Button variant="danger">Reset actuation</Button>}
+              title="Reset all actuation settings?"
+              description="This replaces every key's actuation and rapid-trigger settings with the keyboard defaults."
+              confirmLabel="Reset actuation"
+              onConfirm={() => void factoryReset(SaveTarget.Performance)}
+            />
+            <ConfirmDialog
+              trigger={<Button variant="danger">Reset keymap</Button>}
+              title="Reset the entire keymap?"
+              description="This replaces the assignments on every layer with the keyboard defaults."
+              confirmLabel="Reset keymap"
+              onConfirm={() => void factoryReset(SaveTarget.Layout)}
+            />
           </div>
         </div>
       </Panel>

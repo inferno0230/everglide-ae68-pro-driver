@@ -90,22 +90,25 @@ export function PerformanceSection() {
   const state = React.useCallback(
     (key: KeyGeometry) => {
       const um = travel.get(key.id);
+      const config = performance.get(key.id);
+      const hasDeadZone =
+        config && (config.pressDead > 0 || config.releaseDead > 0);
+      const deadZone = hasDeadZone
+        ? config.pressDead === config.releaseDead
+          ? mm(config.pressDead)
+          : `${mm(config.pressDead)}/${mm(config.releaseDead)}`
+        : undefined;
+
       return {
         ...(live && um !== undefined
           ? { level: Math.min(1, um / MAX_TRAVEL_UM) }
           : {}),
         ...(clamped.has(key.id) ? { mark: "clamped" as const } : {}),
-        settle: {
-          revision: revision.get(key.id) ?? 0,
-          tone: clamped.has(key.id) ? ("danger" as const) : ("accent" as const),
-        },
+        ...(config?.mode === 1 ? { topRight: "RT" } : {}),
+        ...(deadZone ? { bottomLeft: deadZone } : {}),
       };
     },
-    // `travel` moves 20 times a second during the live test and has to stay in
-    // here for `level`. The wash does not care: it is keyed to `revision`,
-    // which only moves when a write comes back, so polling re-renders the caps
-    // without ever restarting an animation.
-    [travel, live, clamped, revision],
+    [travel, live, clamped, performance],
   );
 
   if (!snapshot) return null;
@@ -140,7 +143,7 @@ export function PerformanceSection() {
           </div>
         </PanelHeader>
 
-        <div className="overflow-x-auto p-4">
+        <div className="flex flex-col items-center gap-4 overflow-x-auto p-4 2xl:flex-row 2xl:justify-center">
           <KeyboardView
             keys={keys}
             selection={selection}
@@ -149,8 +152,11 @@ export function PerformanceSection() {
             }
             label={label}
             state={state}
+            className="mx-0 shrink-0"
             ariaLabel="Select keys to edit their actuation"
           />
+
+          <PerformanceKeyGuide />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-3 py-2">
@@ -187,7 +193,6 @@ export function PerformanceSection() {
           record={record}
           count={selection.size}
           busy={busy}
-          rtPrecisionMm={snapshot.rtPrecisionMm}
           // One key: its own answer. Several: the most recent of them, so a
           // multi-key commit still reads as the board replying once.
           revision={Math.max(0, ...selected.map((id) => revision.get(id) ?? 0))}
@@ -196,6 +201,57 @@ export function PerformanceSection() {
         />
       )}
     </div>
+  );
+}
+
+function PerformanceKeyGuide() {
+  return (
+    <aside
+      className="w-full max-w-sm rounded-md bg-canvas-inset p-3 ring-1 ring-inset ring-line 2xl:w-60 2xl:shrink-0"
+      aria-label="Keyboard indicator guide"
+    >
+      <p className="text-xs font-semibold text-fg">Key indicators</p>
+      <p className="mt-1 text-2xs leading-relaxed text-fg-muted">
+        Performance settings appear in the corners of each key.
+      </p>
+
+      <div className="mt-3 grid grid-cols-[3.5rem_1fr] items-center gap-3">
+        <div
+          className="relative h-14 w-14 shrink-0 rounded-[4px] bg-canvas-overlay text-3xs ring-1 ring-inset ring-line"
+          aria-hidden
+        >
+          <span className="absolute top-1.5 right-1.5 font-semibold text-accent">
+            RT
+          </span>
+          <span className="absolute bottom-1.5 left-1.5 font-medium text-fg-subtle">
+            0.10
+          </span>
+        </div>
+        <div className="space-y-2.5">
+          <div>
+            <p className="text-3xs font-semibold tracking-wide text-fg-subtle uppercase">
+              Top right
+            </p>
+            <p className="mt-0.5 text-2xs text-fg-muted">
+              <span className="font-semibold text-accent">RT</span> means rapid
+              trigger is on.
+            </p>
+          </div>
+          <div>
+            <p className="text-3xs font-semibold tracking-wide text-fg-subtle uppercase">
+              Bottom left
+            </p>
+            <p className="mt-0.5 text-2xs text-fg-muted">
+              Dead-zone travel in mm.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <p className="mt-3 border-t border-line pt-2 text-3xs leading-relaxed text-fg-subtle">
+        Two values such as 0.10/0.20 mean top/bottom dead zone.
+      </p>
+    </aside>
   );
 }
 
@@ -258,7 +314,6 @@ function Editor({
   record,
   count,
   busy,
-  rtPrecisionMm,
   revision,
   clamped,
   onChange,
@@ -266,20 +321,23 @@ function Editor({
   record: Partial<PerfRecord> | null;
   count: number;
   busy: boolean;
-  rtPrecisionMm: number;
   revision: number;
   clamped: boolean;
   onChange: (patch: Partial<PerfRecord>) => void;
 }) {
+  const [section, setSection] = React.useState<"trigger" | "dead-zone">(
+    "trigger",
+  );
+
   if (!record) return null;
   const rapid = record.mode === 1;
-  const step = Math.max(10, Math.round(rtPrecisionMm * 1000));
+  const step = 10;
 
   return (
     <Panel>
       <PanelHeader>
         <span>
-          Actuation
+          Performance
           {count > 1 ? (
             <span className="ml-2 font-normal text-fg-muted">
               {count} keys — mixed values shown as blank
@@ -288,113 +346,120 @@ function Editor({
         </span>
         <Segmented
           size="sm"
-          value={rapid ? 1 : 0}
-          onChange={(mode) => onChange({ mode: mode as 0 | 1 })}
+          value={section}
+          onChange={setSection}
           options={[
-            { value: 0, label: "Fixed point" },
-            { value: 1, label: "Rapid trigger" },
+            { value: "trigger", label: "Trigger" },
+            { value: "dead-zone", label: "Dead zone" },
           ]}
         />
       </PanelHeader>
 
-      <div className="grid gap-x-6 gap-y-4 p-4 sm:grid-cols-2">
-        <TravelControl
-          label="Actuation point"
-          hint="How far the key travels before it registers."
-          value={record.press}
-          min={100}
-          max={MAX_TRAVEL_UM}
-          step={step}
-          revision={revision}
-          clamped={clamped}
-          disabled={busy}
-          onCommit={(press) => onChange({ press })}
-        />
-
-        <TravelControl
-          label="Reset point"
-          hint={
-            rapid
-              ? "How far it must rise before it can fire again."
-              : "In fixed mode the firmware ties this to the actuation point."
-          }
-          value={record.release}
-          min={100}
-          max={MAX_TRAVEL_UM}
-          step={step}
-          revision={revision}
-          clamped={clamped}
-          disabled={busy || !rapid}
-          onCommit={(release) => onChange({ release })}
-        />
-
-        {rapid ? (
-          <>
-            <TravelControl
-              label="First actuation depth"
-              hint="Travel required for the very first press of a stroke."
-              value={record.rtFirst}
-              min={50}
-              max={MAX_TRAVEL_UM}
-              step={step}
-              revision={revision}
-              clamped={clamped}
-              disabled={busy}
-              onCommit={(rtFirst) => onChange({ rtFirst })}
+      {section === "trigger" ? (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+            <div>
+              <p className="text-xs font-semibold text-fg">Trigger mode</p>
+              <p className="mt-0.5 text-2xs text-fg-muted">
+                Choose a fixed actuation point or movement-sensitive rapid trigger.
+              </p>
+            </div>
+            <Segmented
+              size="sm"
+              value={rapid ? 1 : 0}
+              onChange={(mode) => onChange({ mode: mode as 0 | 1 })}
+              options={[
+                { value: 0, label: "Fixed point" },
+                { value: 1, label: "Rapid trigger" },
+              ]}
             />
-            <TravelControl
-              label="Press sensitivity"
-              hint="Downward movement needed to re-trigger."
-              value={record.rtPress}
-              min={step}
-              max={1000}
-              step={step}
-              revision={revision}
-              clamped={clamped}
-              disabled={busy}
-              onCommit={(rtPress) => onChange({ rtPress })}
-            />
-            <TravelControl
-              label="Release sensitivity"
-              hint="Upward movement needed to release."
-              value={record.rtRelease}
-              min={step}
-              max={1000}
-              step={step}
-              revision={revision}
-              clamped={clamped}
-              disabled={busy}
-              onCommit={(rtRelease) => onChange({ rtRelease })}
-            />
-          </>
-        ) : null}
+          </div>
 
-        <TravelControl
-          label="Top dead zone"
-          hint="Travel ignored at the top of the stroke."
-          value={record.pressDead}
-          min={0}
-          max={1000}
-          step={10}
-          revision={revision}
-          clamped={clamped}
-          disabled={busy}
-          onCommit={(pressDead) => onChange({ pressDead })}
-        />
+          <div className="grid gap-x-6 gap-y-4 p-4 sm:grid-cols-2">
+            {rapid ? (
+              <>
+                <TravelControl
+                  label="First actuation depth"
+                  hint="Travel required for the very first press of a stroke."
+                  value={record.rtFirst}
+                  min={50}
+                  max={MAX_TRAVEL_UM}
+                  step={step}
+                  revision={revision}
+                  clamped={clamped}
+                  disabled={busy}
+                  onCommit={(rtFirst) => onChange({ rtFirst })}
+                />
+                <TravelControl
+                  label="Press sensitivity"
+                  hint="Downward movement needed to re-trigger."
+                  value={record.rtPress}
+                  min={step}
+                  max={1000}
+                  step={step}
+                  revision={revision}
+                  clamped={clamped}
+                  disabled={busy}
+                  onCommit={(rtPress) => onChange({ rtPress })}
+                />
+                <TravelControl
+                  label="Release sensitivity"
+                  hint="Upward movement needed to release."
+                  value={record.rtRelease}
+                  min={step}
+                  max={1000}
+                  step={step}
+                  revision={revision}
+                  clamped={clamped}
+                  disabled={busy}
+                  onCommit={(rtRelease) => onChange({ rtRelease })}
+                />
+              </>
+            ) : (
+              <TravelControl
+                label="Actuation point"
+                hint="How far the key travels before it registers and resets."
+                value={record.press}
+                min={100}
+                max={MAX_TRAVEL_UM}
+                step={step}
+                revision={revision}
+                clamped={clamped}
+                disabled={busy}
+                onCommit={(press) => onChange({ press })}
+              />
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="grid gap-x-6 gap-y-4 p-4 sm:grid-cols-2">
+          <TravelControl
+            label="Top dead zone"
+            hint="Travel ignored at the top of the stroke."
+            value={record.pressDead}
+            min={0}
+            max={1000}
+            step={step}
+            revision={revision}
+            clamped={clamped}
+            disabled={busy}
+            onCommit={(pressDead) => onChange({ pressDead })}
+          />
 
-        <TravelControl
-          label="Bottom dead zone"
-          hint="Travel ignored at the bottom of the stroke."
-          value={record.releaseDead}
-          min={0}
-          max={1000}
-          step={10}
-          revision={revision}
-          clamped={clamped}
-          disabled={busy}
-          onCommit={(releaseDead) => onChange({ releaseDead })}
-        />
-      </div>
+          <TravelControl
+            label="Bottom dead zone"
+            hint="Travel ignored at the bottom of the stroke."
+            value={record.releaseDead}
+            min={0}
+            max={1000}
+            step={step}
+            revision={revision}
+            clamped={clamped}
+            disabled={busy}
+            onCommit={(releaseDead) => onChange({ releaseDead })}
+          />
+        </div>
+      )}
     </Panel>
   );
 }
@@ -426,6 +491,11 @@ function TravelControl({
   // device on release — every write is a round trip to the board.
   const [dragging, setDragging] = React.useState<number | null>(null);
   const shown = dragging ?? value;
+  const commitDraft = () => {
+    if (dragging === null) return;
+    setDragging(null);
+    onCommit(dragging);
+  };
 
   return (
     <Field
@@ -451,12 +521,32 @@ function TravelControl({
             tone={clamped ? "danger" : "accent"}
             className="shrink-0"
           >
-            <Readout
-              className="w-14 text-right"
-              value={shown === undefined ? "—" : mm(shown)}
-              unit="mm"
-              tone={value === undefined ? "muted" : "default"}
-            />
+            <span className="relative block w-20">
+              <input
+                type="number"
+                min={min / 1000}
+                max={max / 1000}
+                step={step / 1000}
+                value={shown === undefined ? "" : (shown / 1000).toFixed(2)}
+                disabled={disabled || value === undefined}
+                aria-label={`${label} in millimetres`}
+                aria-invalid={clamped || undefined}
+                onChange={(event) => {
+                  const next = event.currentTarget.valueAsNumber;
+                  if (!Number.isFinite(next)) return;
+                  const micrometres = Math.round((next * 1000) / step) * step;
+                  setDragging(Math.min(max, Math.max(min, micrometres)));
+                }}
+                onBlur={commitDraft}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.currentTarget.blur();
+                }}
+                className="h-7 w-full rounded-md bg-canvas-overlay pr-7 pl-2 text-right font-mono text-xs text-fg ring-1 ring-inset ring-line transition-shadow hover:ring-line-strong focus:ring-accent"
+              />
+              <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-3xs text-fg-subtle">
+                mm
+              </span>
+            </span>
           </Settle>
         </div>
       }

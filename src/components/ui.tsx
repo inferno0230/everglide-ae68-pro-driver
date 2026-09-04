@@ -7,6 +7,7 @@
  */
 
 import * as React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
@@ -39,7 +40,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-md border font-medium",
+        "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border font-medium",
         "transition-colors duration-100",
         "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-canvas-overlay",
         size === "sm" ? "h-6 px-2 text-2xs" : "h-7 px-3 text-xs",
@@ -123,7 +124,7 @@ export function Slider({
   return (
     <SliderPrimitive.Root
       className={cn(
-        "relative flex h-4 w-full touch-none items-center select-none",
+        "relative flex h-4 w-full cursor-pointer touch-none items-center select-none",
         "disabled:opacity-50",
         className,
       )}
@@ -136,8 +137,8 @@ export function Slider({
         <SliderPrimitive.Thumb
           key={i}
           className={cn(
-            "block h-3.5 w-3.5 rounded-full border border-line-strong bg-fg",
-            "transition-colors hover:border-accent",
+            "block h-3.5 w-3.5 rounded-full bg-fg ring-1 ring-line-strong",
+            "transition-shadow hover:ring-accent",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
           )}
         />
@@ -155,7 +156,7 @@ export function Switch({
   return (
     <SwitchPrimitive.Root
       className={cn(
-        "peer inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors",
+        "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border transition-colors",
         "border-line bg-canvas-overlay",
         "data-[state=checked]:border-[#2ea043] data-[state=checked]:bg-[#238636]",
         "disabled:cursor-not-allowed disabled:opacity-50",
@@ -214,7 +215,7 @@ export function Segmented<T extends string | number>({
             aria-pressed={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              "rounded-sm font-medium transition-colors",
+              "cursor-pointer rounded-sm font-medium transition-colors",
               size === "sm" ? "h-5 px-2 text-2xs" : "h-6 px-2.5 text-xs",
               active
                 ? "bg-canvas-overlay text-fg shadow-[inset_0_0_0_1px_var(--color-line)]"
@@ -263,66 +264,64 @@ export function Select({
   );
 }
 
-// --- the board answering ---------------------------------------------------
-
-/*
- * One strength, everywhere. The `-subtle` tokens are 10% and disappear behind a
- * number; the wash has to be noticed to mean anything. 25% reads clearly on a
- * panel and still sits above the 10% accent-subtle fill of a selected keycap,
- * so a selected key answering does not look like a selected key.
- */
-const SETTLE_TONES = {
-  accent: "bg-accent/25",
-  danger: "bg-danger/25",
-  success: "bg-success/25",
-} as const;
-
-/**
- * A wash that decays behind something the board just answered for.
- *
- * This is the app's one authored motion. Every write round-trips and the reply
- * wins, so a reconciled value is indistinguishable from one that was already
- * sitting there — it simply *is* the number. The wash gives that arrival a
- * moment, and its tone says which kind of arrival it was: `accent` for the
- * board storing what was asked, `danger` for it storing something else,
- * `success` for volatile work reaching flash.
- *
- * `revision` is an identity, not a quantity: changing it remounts the tint and
- * so restarts the animation, which is the only reliable way to replay a CSS
- * keyframe on a value that did not otherwise change. At `0` nothing has been
- * answered yet and nothing renders, so a first paint is quiet.
- */
+// Retained as a stable wrapper for value layout, without the old flashing
+// response wash. Device replies now update in place without visual flicker.
 export function Settle({
-  revision,
-  tone = "accent",
-  slow,
+  revision: _revision,
+  tone: _tone = "accent",
+  slow: _slow,
   className,
   children,
 }: {
   revision: number;
-  tone?: keyof typeof SETTLE_TONES;
-  /** The footer commit holds a beat longer, because it covers more ground. */
+  tone?: "accent" | "danger" | "success";
   slow?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
+  return <span className={className}>{children}</span>;
+}
+
+// --- confirmation dialog -------------------------------------------------
+
+export function ConfirmDialog({
+  trigger,
+  title,
+  description,
+  confirmLabel,
+  onConfirm,
+}: {
+  trigger: React.ReactNode;
+  title: string;
+  description: React.ReactNode;
+  confirmLabel: string;
+  onConfirm: () => void;
+}) {
   return (
-    <span className={cn("relative isolate", className)}>
-      {revision > 0 ? (
-        <span
-          key={revision}
-          aria-hidden
-          className={cn(
-            // Bleeds past the content so the tint reads as a field behind the
-            // value rather than a box drawn around it.
-            "pointer-events-none absolute -inset-x-1.5 -inset-y-1 -z-10 rounded",
-            slow ? "animate-settle-slow" : "animate-settle",
-            SETTLE_TONES[tone],
-          )}
-        />
-      ) : null}
-      {children}
-    </span>
+    <DialogPrimitive.Root>
+      <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-canvas/80 backdrop-blur-sm" />
+        <DialogPrimitive.Content className="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-line bg-canvas-subtle p-5 shadow-2xl">
+          <DialogPrimitive.Title className="text-sm font-semibold text-fg">
+            {title}
+          </DialogPrimitive.Title>
+          <DialogPrimitive.Description className="mt-2 text-xs leading-relaxed text-fg-muted">
+            {description}
+          </DialogPrimitive.Description>
+          <div className="mt-5 flex justify-end gap-2">
+            <DialogPrimitive.Close asChild>
+              <Button>Cancel</Button>
+            </DialogPrimitive.Close>
+            <DialogPrimitive.Close asChild>
+              <Button variant="danger" onClick={onConfirm}>
+                {confirmLabel}
+              </Button>
+            </DialogPrimitive.Close>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
 

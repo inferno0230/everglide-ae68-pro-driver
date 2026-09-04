@@ -5,6 +5,7 @@ import { LightBar } from "@/components/LightBar";
 import {
   Badge,
   Button,
+  ConfirmDialog,
   Field,
   Panel,
   PanelHeader,
@@ -221,14 +222,23 @@ export function LightingSection() {
               </Badge>
             ) : null}
           </span>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={busy || areaColors.size === 0}
-            onClick={() => void paintLights(area, [...areaColors.keys()], null)}
-          >
-            Clear all
-          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={busy || areaColors.size === 0}
+              >
+                Clear all
+              </Button>
+            }
+            title={`Clear all ${isKeyboard ? "key" : "light-bar"} colours?`}
+            description="Every custom colour in this lighting area will be handed back to the active effect."
+            confirmLabel="Clear all colours"
+            onConfirm={() =>
+              void paintLights(area, [...areaColors.keys()], null)
+            }
+          />
           </PanelHeader>
 
         <div className="flex flex-wrap items-center gap-4 p-4">
@@ -238,7 +248,7 @@ export function LightingSection() {
               control={
                 <div className="flex items-center gap-2">
                   <label
-                    className="block h-8 w-14 shrink-0 cursor-pointer rounded-md border border-line transition-colors hover:border-line-strong"
+                    className="block h-8 w-14 shrink-0 cursor-pointer rounded-md ring-1 ring-inset ring-line transition-shadow hover:ring-line-strong"
                     style={{ backgroundColor: `rgb(${brush.r} ${brush.g} ${brush.b})` }}
                   >
                     <span className="sr-only">Brush colour</span>
@@ -267,7 +277,7 @@ export function LightingSection() {
                         type="button"
                         aria-label={`Use palette slot ${i + 1}`}
                         onClick={() => setBrush({ r: slot.r, g: slot.g, b: slot.b })}
-                        className="h-8 w-8 rounded-md border border-line transition-colors hover:border-line-strong"
+                        className="h-8 w-8 rounded-md ring-1 ring-inset ring-line transition-shadow hover:ring-line-strong"
                         style={{ backgroundColor: `rgb(${slot.r} ${slot.g} ${slot.b})` }}
                       />
                     ),
@@ -529,10 +539,10 @@ function SlotSwatch({
         aria-pressed={active}
         aria-label={isRgbSlot ? "Cycling hue slot" : `Palette slot ${index + 1}`}
         className={cn(
-          "block h-11 w-full rounded-md border transition-colors",
+          "block h-11 w-full rounded-md ring-1 ring-inset transition-shadow",
           active
-            ? "border-accent ring-1 ring-accent/40"
-            : "border-line hover:border-line-strong",
+            ? "ring-2 ring-accent"
+            : "ring-line hover:ring-line-strong",
         )}
         style={
           isRgbSlot
@@ -553,7 +563,7 @@ function SlotSwatch({
           aria-label={`Colour for slot ${index + 1}`}
           value={hex(slot)}
           onChange={(e) => onColor({ ...slot, ...fromHex(e.target.value) })}
-          className="h-5 w-full cursor-pointer rounded border border-line bg-canvas-overlay"
+          className="h-5 w-full cursor-pointer rounded bg-canvas-overlay ring-1 ring-inset ring-line"
         />
       )}
     </div>

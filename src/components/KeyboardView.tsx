@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 const UNIT = 52; // px per key unit at scale 1
 const GAP = 4;
 const ROW_HEIGHT = UNIT;
+const MAX_FIT_SCALE = 1.35;
 
 export interface KeyGeometry extends PhysicalKey {
   id: string;
@@ -77,20 +78,16 @@ export interface KeyRenderState {
   level?: number;
   /** Right-hand corner mark: unsaved, clamped, etc. */
   mark?: "dirty" | "clamped" | "custom";
+  /** Plain status text shown in the top-right corner of the key. */
+  topRight?: string;
+  /** Plain status text shown in the bottom-left corner of the key. */
+  bottomLeft?: string;
   /**
    * A short tag along the bottom of the cap — the vendor's own affordance for
    * "this key does something beyond its legend", and the only way to read an
    * advanced-key map at a glance.
    */
   badge?: string;
-  /**
-   * The board just answered for this key. Changing the revision replays the
-   * wash; the tone says whether the firmware stored what was asked.
-   *
-   * Select all 68 keys and commit, and this is the whole board answering at
-   * once — the only moment the render does something rather than being read.
-   */
-  settle?: { revision: number; tone?: "accent" | "danger" };
   /** Dimmed keys read as out of scope for the current task. */
   dim?: boolean;
 }
@@ -130,6 +127,8 @@ export function KeyboardView({
 }) {
   const { geometry, rows, widthUnits } = useGeometry(keys);
   const unit = UNIT * scale;
+  const boardWidth = widthUnits * unit;
+  const boardHeight = rows.length * (unit + GAP) - GAP;
   const interactive = Boolean(onSelect) || Boolean(onPaint);
 
   // A stroke is held on the window, not on a key: the pointer leaves the key
@@ -163,10 +162,12 @@ export function KeyboardView({
     <div
       role={interactive ? "group" : undefined}
       aria-label={ariaLabel}
-      className={cn("relative select-none", className)}
+      className={cn("relative mx-auto select-none", className)}
       style={{
-        width: widthUnits * unit,
-        height: rows.length * (unit + GAP) - GAP,
+        width: "100%",
+        minWidth: boardWidth,
+        maxWidth: boardWidth * MAX_FIT_SCALE,
+        aspectRatio: `${boardWidth} / ${boardHeight}`,
       }}
     >
       {geometry.map((key) => {
@@ -180,6 +181,8 @@ export function KeyboardView({
             geometry={key}
             unit={unit}
             top={rowIndex * (ROW_HEIGHT * scale + GAP)}
+            boardWidth={boardWidth}
+            boardHeight={boardHeight}
             selected={selected}
             interactive={interactive}
             state={s}
@@ -220,6 +223,8 @@ function KeyCap({
   geometry,
   unit,
   top,
+  boardWidth,
+  boardHeight,
   selected,
   interactive,
   state,
@@ -232,6 +237,8 @@ function KeyCap({
   geometry: KeyGeometry;
   unit: number;
   top: number;
+  boardWidth: number;
+  boardHeight: number;
   selected: boolean;
   interactive: boolean;
   state: KeyRenderState | undefined;
@@ -245,10 +252,10 @@ function KeyCap({
   const height = unit - GAP;
 
   const style: React.CSSProperties = {
-    left: geometry.x * unit,
-    top,
-    width,
-    height,
+    left: `${(geometry.x * unit * 100) / boardWidth}%`,
+    top: `${(top * 100) / boardHeight}%`,
+    width: `${(width * 100) / boardWidth}%`,
+    height: `${(height * 100) / boardHeight}%`,
   };
   if (state?.fill) style.backgroundColor = state.fill;
   if (state?.foreground) style.color = state.foreground;
@@ -261,20 +268,6 @@ function KeyCap({
           aria-hidden
           className="absolute inset-x-0 bottom-0 rounded-b-[3px] bg-accent/35"
           style={{ height: `${Math.min(1, state.level) * 100}%` }}
-        />
-      ) : null}
-
-      {state?.settle && state.settle.revision > 0 ? (
-        <span
-          key={state.settle.revision}
-          aria-hidden
-          className={cn(
-            // Same strength as the Settle primitive; see its note. Deliberately
-            // above the selected fill it lands on, or a selected key answering
-            // looks exactly like a selected key.
-            "pointer-events-none absolute inset-0 animate-settle",
-            state.settle.tone === "danger" ? "bg-danger/25" : "bg-accent/25",
-          )}
         />
       ) : null}
 
@@ -298,11 +291,24 @@ function KeyCap({
         </span>
       ) : null}
 
+      {state?.topRight ? (
+        <span className="absolute top-1 right-1 z-10 text-3xs leading-none font-semibold text-accent">
+          {state.topRight}
+        </span>
+      ) : null}
+
+      {state?.bottomLeft ? (
+        <span className="absolute bottom-1 left-1 z-10 text-3xs leading-none font-medium text-fg-subtle">
+          {state.bottomLeft}
+        </span>
+      ) : null}
+
       {state?.mark ? (
         <span
           aria-hidden
           className={cn(
-            "absolute top-1 right-1 z-10 h-1.5 w-1.5 rounded-full",
+            "absolute top-1 z-10 h-1.5 w-1.5 rounded-full",
+            state.topRight ? "left-1" : "right-1",
             state.mark === "dirty" && "bg-attention",
             state.mark === "clamped" && "bg-danger",
             state.mark === "custom" && "bg-accent",
@@ -313,13 +319,13 @@ function KeyCap({
   );
 
   const shell = cn(
-    "absolute flex items-center justify-center overflow-hidden rounded-[4px] border",
-    "transition-colors duration-100",
+    "absolute flex items-center justify-center overflow-hidden rounded-[4px] ring-1 ring-inset",
+    "transition-[background-color,color,box-shadow] duration-100",
     selected
-      ? "border-accent bg-accent-subtle text-fg"
-      : "border-line bg-canvas-overlay text-fg-muted",
+      ? "bg-accent-subtle text-fg ring-accent"
+      : "bg-canvas-overlay text-fg-muted ring-line",
     state?.dim && !selected && "opacity-40",
-    interactive && !selected && "hover:border-line-strong hover:text-fg",
+    interactive && !selected && "hover:text-fg hover:ring-line-strong",
     interactive && "cursor-pointer",
   );
 

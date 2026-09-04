@@ -18,6 +18,7 @@ import { KeyboardView, type KeyGeometry } from "@/components/KeyboardView";
 import {
   Badge,
   Button,
+  ConfirmDialog,
   EmptyState,
   Field,
   Panel,
@@ -166,6 +167,23 @@ export function AdvancedSection() {
   const [picked, setPicked] = React.useState<string[]>([]);
   const [mode, setMode] = React.useState<Mode>(HigherKeyMode.None);
 
+  React.useEffect(() => {
+    if (picked.length === 0) return;
+
+    const clearSelection = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      // An open confirmation owns Escape and should close before the keyboard
+      // selection beneath it changes.
+      if (document.querySelector('[role="dialog"]')) return;
+      event.preventDefault();
+      setPicked([]);
+      setMode(HigherKeyMode.None);
+    };
+
+    window.addEventListener("keydown", clearSelection);
+    return () => window.removeEventListener("keydown", clearSelection);
+  }, [picked.length]);
+
   const keys = snapshot?.keys ?? [];
   const info = modeInfo(mode);
 
@@ -208,10 +226,6 @@ export function AdvancedSection() {
     // Dropping from a pair mode to a single one leaves the second key bound to
     // nothing; keep the first and let the user re-pick.
     if (!modeInfo(next).pair && picked.length > 1) setPicked([picked[0]!]);
-    // "Off" is a real edit, not just a view change — it clears the board.
-    if (next === HigherKeyMode.None && picked.some((id) => higher.has(id))) {
-      void clearHigherKeys(picked.map(refOf));
-    }
   };
 
   const label = React.useCallback(
@@ -276,7 +290,8 @@ export function AdvancedSection() {
         <p className="border-t border-line px-3 py-2 text-2xs text-fg-muted">
           {info.pair
             ? "Pick two keys — the first is A, the second B."
-            : "Pick one key. Clicking a key that already has a behaviour opens it."}
+            : "Pick one key. Clicking a key that already has a behaviour opens it."}{" "}
+          Press Esc to clear the selection.
         </p>
       </Panel>
 
@@ -292,21 +307,24 @@ export function AdvancedSection() {
           </span>
           <div className="flex items-center gap-2">
             {stored ? (
-              <Button
-                size="sm"
-                variant="danger"
-                disabled={busy}
-                onClick={() => {
+              <ConfirmDialog
+                trigger={
+                  <Button size="sm" variant="danger" disabled={busy}>
+                    <Trash2 size={12} />
+                    Remove
+                  </Button>
+                }
+                title="Remove this advanced behaviour?"
+                description="The selected key or key pair will return to its normal keymap behaviour."
+                confirmLabel="Remove behaviour"
+                onConfirm={() => {
                   void clearHigherKeys(picked.map(refOf));
                   setMode(HigherKeyMode.None);
                   // A pair leaves two keys picked; without this the panel asks
                   // for a second key for a mode that does not take one.
                   setPicked(picked.slice(0, 1));
                 }}
-              >
-                <Trash2 size={12} />
-                Remove
-              </Button>
+              />
             ) : null}
           </div>
         </PanelHeader>
@@ -316,7 +334,9 @@ export function AdvancedSection() {
             size="sm"
             value={mode}
             onChange={changeMode}
-            options={MODES.map((m) => ({
+            options={MODES.filter(
+              (candidate) => !stored || candidate.value !== HigherKeyMode.None,
+            ).map((m) => ({
               value: m.value,
               label: m.label,
               title: m.name,

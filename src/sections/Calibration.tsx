@@ -5,6 +5,7 @@ import { KeyboardView, type KeyGeometry } from "@/components/KeyboardView";
 import {
   Badge,
   Button,
+  ConfirmDialog,
   Panel,
   PanelHeader,
   Readout,
@@ -204,10 +205,18 @@ export function CalibrationSection() {
               Finish calibration
             </Button>
           ) : (
-            <Button onClick={() => void start()}>
-              <Crosshair size={14} />
-              {phase === "done" ? "Calibrate again" : "Start calibration"}
-            </Button>
+            <ConfirmDialog
+              trigger={
+                <Button>
+                  <Crosshair size={14} />
+                  {phase === "done" ? "Calibrate again" : "Start calibration"}
+                </Button>
+              }
+              title="Start switch calibration?"
+              description="Calibration changes the board's switch measurements as you press keys. Finish every key before saving the result."
+              confirmLabel="Start calibration"
+              onConfirm={() => void start()}
+            />
           )}
         </div>
 

@@ -167,7 +167,7 @@ export function Sidebar({
         nothing on this board survives a power cycle until it is written to
         flash, so it must never be somewhere the user can scroll past.
       */}
-      <footer className="border-t border-line p-2.5">
+      <footer className="sticky bottom-0 z-10 border-t border-line bg-canvas-inset p-2.5">
         {connected ? (
           <>
             {/*

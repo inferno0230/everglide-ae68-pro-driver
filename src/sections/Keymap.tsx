@@ -291,10 +291,10 @@ function KeycodeButton({
       aria-pressed={active}
       onClick={() => onSelect(option.code)}
       className={cn(
-        "h-6 rounded-md border px-2 text-2xs transition-colors",
+        "h-6 rounded-md px-2 text-2xs ring-1 ring-inset transition-[background-color,color,box-shadow]",
         active
-          ? "border-accent bg-accent-subtle text-accent"
-          : "border-line bg-canvas-overlay text-fg-muted hover:border-line-strong hover:text-fg",
+          ? "bg-accent-subtle text-accent ring-accent"
+          : "bg-canvas-overlay text-fg-muted ring-line hover:text-fg hover:ring-line-strong",
       )}
     >
       {option.label}

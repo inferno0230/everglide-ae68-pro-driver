@@ -73,7 +73,7 @@ export default function App() {
             <>
               <header className="sticky top-0 z-20 border-b border-line bg-canvas/95 py-3 backdrop-blur-sm">
                 {/* Same box as the content below, so the two left edges line up. */}
-                <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-4 px-6">
+                <div className="flex w-full items-center justify-between gap-4 px-6">
                   <div className="min-w-0">
                     <h2 className="text-sm font-semibold text-fg">
                       {TITLES[section].title}
@@ -108,7 +108,7 @@ export default function App() {
                 column strands it against the left edge and stretches every
                 slider beside it. Cap the measure the way GitHub does.
               */}
-              <div className="mx-auto max-w-[1240px] px-6 py-5">
+              <div className="w-full px-6 py-5">
                 <Section id={section} />
               </div>
             </>

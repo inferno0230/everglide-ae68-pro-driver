@@ -621,42 +621,42 @@
   "nativeName": "かな"
  },
  "224": {
-  "label": "L-Ctrl",
+  "label": "Ctrl (L)",
   "group": "basic",
   "hid": 224
  },
  "225": {
-  "label": "L-Shift",
+  "label": "Shift (L)",
   "group": "basic",
   "hid": 225
  },
  "226": {
-  "label": "L-Alt",
+  "label": "Alt (L)",
   "group": "basic",
   "hid": 226
  },
  "227": {
-  "label": "L-Gui",
+  "label": "Super (L)",
   "group": "basic",
   "hid": 227
  },
  "228": {
-  "label": "R-Ctrl",
+  "label": "Ctrl (R)",
   "group": "basic",
   "hid": 228
  },
  "229": {
-  "label": "R-Shift",
+  "label": "Shift (R)",
   "group": "basic",
   "hid": 229
  },
  "230": {
-  "label": "R-Alt",
+  "label": "Alt (R)",
   "group": "basic",
   "hid": 230
  },
  "231": {
-  "label": "R-Gui",
+  "label": "Super (R)",
   "group": "basic",
   "hid": 231
  },
