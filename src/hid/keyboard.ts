@@ -12,6 +12,7 @@ import {
   Category,
   LAYER_COUNT,
   LightArea,
+  MACRO_SLOTS,
   PROFILE_COUNT,
   SaveTarget,
 } from "./protocol/constants";
@@ -94,6 +95,7 @@ function pinned(
   return out;
 }
 import * as adv from "./protocol/higherkey";
+import * as mac from "./protocol/macro";
 
 /** Flash writes and calibration take noticeably longer than a read. */
 const SLOW: SendOptions = { timeout: 3000 };
@@ -470,6 +472,68 @@ export class Keyboard {
     }
   }
 
+  // --- macros (unverified on hardware) -------------------------------------
+
+  async macroSpace(): Promise<{ slots: number; totalBytes: number }> {
+    return glob.parseMacroSpace(
+      await this.transport.send(glob.getMacroSpace()),
+    );
+  }
+
+  async macro(
+    macroId: number,
+  ): Promise<{ mode: mac.MacroMode; actions: mac.MacroAction[] }> {
+    const mode = mac.parseMacroMode(
+      await this.transport.send(mac.getMacroMode(macroId)),
+    );
+    const pages = Math.ceil(mode.actionCount / 15);
+    const actions: mac.MacroAction[] = [];
+    for (let page = 0; page < pages; page++) {
+      const { actions: pageActions } = mac.parseMacroData(
+        await this.transport.send(mac.getMacroData(macroId, page), PAGED),
+      );
+      actions.push(...pageActions);
+    }
+    return { mode, actions: actions.slice(0, mode.actionCount) };
+  }
+
+  async allMacros(slots = MACRO_SLOTS): Promise<mac.MacroMode[]> {
+    const modes: mac.MacroMode[] = [];
+    for (let id = 0; id < slots; id++) {
+      modes.push(
+        mac.parseMacroMode(await this.transport.send(mac.getMacroMode(id))),
+      );
+    }
+    return modes;
+  }
+
+  /**
+   * Write a mac. The mode record carries the action count, so it must land
+   * before the pages that follow it.
+   */
+  async setMacro(
+    macroId: number,
+    actions: readonly mac.MacroAction[],
+    options: { repeatCount?: number; mode?: number } = {},
+  ): Promise<void> {
+    await this.transport.send(
+      mac.setMacroMode({
+        macroId,
+        valid: actions.length > 0,
+        actionCount: actions.length,
+        repeatCount: options.repeatCount ?? 1,
+        mode: options.mode ?? 0,
+      }),
+    );
+    const pages = mac.pageActions(actions);
+    for (let page = 0; page < pages.length; page++) {
+      await this.transport.send(
+        mac.setMacroData(macroId, page, pages[page] ?? []),
+        PAGED,
+      );
+    }
+  }
+
   // --- profiles, calibration, save -----------------------------------------
 
   async activeProfile(): Promise<number> {
@@ -478,10 +542,25 @@ export class Keyboard {
     );
   }
 
+  /** Switching a profile reloads every per-profile setting on the board. */
+  async setActiveProfile(index: number): Promise<void> {
+    await this.transport.send(glob.setActiveProfile(index), SLOW);
+  }
+
   async profileName(index: number): Promise<string> {
     return glob.parseProfileName(
       await this.transport.send(glob.getProfileName(index), { matchBytes: 3 }),
     );
+  }
+
+  async setProfileName(index: number, name: string): Promise<void> {
+    await this.transport.send(glob.setProfileName(index, name), {
+      matchBytes: 3,
+    });
+  }
+
+  async setReportRate(hz: number): Promise<void> {
+    await this.transport.send(glob.setReportRate(glob.reportRateCode(hz)));
   }
 
   /** Start, then press every key fully down and fully release it. */
@@ -497,7 +576,11 @@ export class Keyboard {
   async save(target: SaveTarget = SaveTarget.All): Promise<void> {
     await this.transport.send(glob.saveParam(target), SLOW);
   }
+
+  async factoryReset(target: SaveTarget = SaveTarget.All): Promise<void> {
+    await this.transport.send(glob.resetFactory(target), SLOW);
+  }
 }
 
 export { Transport, codec, Category, AxisKind, SaveTarget, LightArea };
-export { perf, light, adv, layout, device, glob };
+export { perf, light, adv, mac, layout, device, glob };

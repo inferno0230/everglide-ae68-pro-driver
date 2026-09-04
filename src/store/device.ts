@@ -113,7 +113,11 @@ interface DeviceState {
     color: Rgb | null,
   ) => Promise<void>;
 
+  switchProfile: (index: number) => Promise<void>;
+  renameProfile: (index: number, name: string) => Promise<void>;
+  setReportRate: (hz: number) => Promise<void>;
   save: () => Promise<void>;
+  factoryReset: (target: SaveTarget) => Promise<void>;
   runCalibration: (phase: "start" | "stop") => Promise<void>;
 
   pollAxis: (kind: AxisKind, rows: number[]) => Promise<Map<string, number>>;
@@ -421,6 +425,93 @@ export const useDevice = create<DeviceState>((set, get) => ({
     }
   },
 
+  async switchProfile(index) {
+    set({ busy: true });
+    try {
+      await keyboard.setActiveProfile(index);
+      // Switching reloads every per-profile setting on the board, so nothing
+      // cached here survives it.
+      await reload();
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false });
+    }
+  },
+
+  async renameProfile(index, name) {
+    try {
+      await keyboard.setProfileName(index, name);
+      const snapshot = get().snapshot;
+      if (!snapshot) return;
+      const profiles = snapshot.profiles.map((p) =>
+        p.index === index ? { ...p, name } : p,
+      );
+      set({ snapshot: { ...snapshot, profiles } });
+    } catch (err) {
+      set({ error: message(err) });
+    }
+  },
+
+  async setReportRate(hz) {
+    const { simulated } = get();
+    const identity = transport.identity;
+
+    // The simulator does not restart, so keep its fast in-place path.
+    if (simulated) {
+      try {
+        await keyboard.setReportRate(hz);
+        const snapshot = get().snapshot;
+        if (snapshot) set({ snapshot: { ...snapshot, reportRateHz: hz } });
+      } catch (err) {
+        set({ error: message(err) });
+      }
+      return;
+    }
+
+    if (!identity) {
+      set({ status: "disconnected", error: "no keyboard connected" });
+      return;
+    }
+
+    set({ status: "reconnecting", busy: true, error: null });
+
+    // Attach before writing: the USB reset can happen before the command's
+    // reply reaches the browser. Both promises handle rejection immediately,
+    // so neither becomes an unhandled rejection while the other is pending.
+    const reconnected = Transport.waitForReconnect(identity).then(
+      (hid) => ({ hid, error: null as unknown }),
+      (error: unknown) => ({ hid: null, error }),
+    );
+    const wrote = keyboard.setReportRate(hz).then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+    try {
+      const cycle = await reconnected;
+      if (!cycle.hid) throw cycle.error;
+
+      // Closing rejects a report-rate waiter if the board restarted before it
+      // could acknowledge the command. That is expected; the fresh read below
+      // is the source of truth.
+      await transport.close();
+      await wrote;
+      await transport.open(cycle.hid);
+      await reload();
+      set({ status: "connected", error: null, dirty: new Set() });
+    } catch (err) {
+      await transport.close();
+      const writeError = await wrote;
+      set({
+        status: "error",
+        error: message(writeError ?? err),
+      });
+    } finally {
+      set({ busy: false });
+    }
+  },
+
   async save() {
     if (get().dirty.size === 0) return;
     set({ saving: true });
@@ -433,6 +524,19 @@ export const useDevice = create<DeviceState>((set, get) => ({
       set({ error: message(err) });
     } finally {
       set({ saving: false });
+    }
+  },
+
+  async factoryReset(target) {
+    set({ busy: true });
+    try {
+      await keyboard.factoryReset(target);
+      await reload();
+      set({ dirty: new Set() });
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false });
     }
   },
 

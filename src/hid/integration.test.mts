@@ -367,6 +367,22 @@ await check("reads four profiles and the active one", () => {
   assert.equal(snapshot.activeProfile, 0);
 });
 
+await check("renaming a profile round-trips", async () => {
+  await keyboard.setProfileName(1, "Rapid");
+  assert.equal(await keyboard.profileName(1), "Rapid");
+});
+
+await check("switching profiles updates the active index", async () => {
+  await keyboard.setActiveProfile(2);
+  assert.equal(await keyboard.activeProfile(), 2);
+  await keyboard.setActiveProfile(0);
+});
+
+await check("report rate reads and writes in Hz", async () => {
+  assert.equal(snapshot.reportRateHz, 1000);
+  await keyboard.setReportRate(8000);
+});
+
 await check("save targets are accepted", async () => {
   await keyboard.save(SaveTarget.Performance);
   await keyboard.save(SaveTarget.All);
@@ -470,6 +486,40 @@ await check("device reports zone topology and dual lighting", () => {
   assert.equal(snapshot.ledZones[1]?.cols, 40, "40-LED light bar");
   assert.equal(snapshot.dualLighting, true);
   assert.equal(snapshot.rtPrecisionMm, 0.01);
+});
+
+await check("USB restart waits for disconnect before reconnecting", async () => {
+  const identity = transport.identity;
+  assert.ok(identity);
+
+  const hid = new EventTarget();
+  const original = Object.getOwnPropertyDescriptor(navigator, "hid");
+  Object.defineProperty(navigator, "hid", {
+    configurable: true,
+    value: hid,
+  });
+
+  const emit = (type: "connect" | "disconnect", device: HIDDevice) => {
+    hid.dispatchEvent(
+      Object.assign(new Event(type), { device }) as HIDConnectionEvent,
+    );
+  };
+
+  try {
+    const restarted = createSimulatedDevice();
+    const stray = createSimulatedDevice();
+    const waiting = Transport.waitForReconnect(identity, 100);
+
+    // A stray connect alone must not be mistaken for this board's USB cycle.
+    emit("connect", stray);
+    emit("disconnect", createSimulatedDevice());
+    emit("connect", restarted);
+
+    assert.equal(await waiting, restarted);
+  } finally {
+    if (original) Object.defineProperty(navigator, "hid", original);
+    else Reflect.deleteProperty(navigator, "hid");
+  }
 });
 
 await transport.close();

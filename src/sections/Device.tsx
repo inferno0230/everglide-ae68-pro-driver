@@ -1,13 +1,23 @@
 import { useDevice } from "@/store/device";
 import {
   Badge,
+  Button,
+  Field,
   Panel,
   PanelHeader,
   Readout,
+  Select,
 } from "@/components/ui";
+import { REPORT_RATES, SaveTarget } from "@/hid/protocol/constants";
 
 export function DeviceSection() {
-  const { snapshot, simulated } = useDevice();
+  const {
+    snapshot,
+    simulated,
+    setReportRate,
+    factoryReset,
+    renameProfile,
+  } = useDevice();
 
   if (!snapshot) return null;
   const { info, protocol, feature, ledZones } = snapshot;
@@ -98,7 +108,91 @@ export function DeviceSection() {
         </Panel>
       </div>
 
+      <Panel>
+        <PanelHeader>
+          <span>Settings</span>
+        </PanelHeader>
+        <div className="grid gap-4 p-4 sm:grid-cols-2">
+          <Field
+            label="Report rate"
+            htmlFor="rate"
+            hint="How often the board reports to the host."
+            control={
+              <Select
+                id="rate"
+                value={snapshot.reportRateHz}
+                onChange={(e) => void setReportRate(Number(e.target.value))}
+              >
+                {REPORT_RATES.map((r) => (
+                  <option key={r.code} value={r.hz}>
+                    {r.hz >= 1000 ? `${r.hz / 1000} kHz` : `${r.hz} Hz`}
+                  </option>
+                ))}
+              </Select>
+            }
+          />
+          <ProfileNames onRename={renameProfile} profiles={snapshot.profiles} />
+        </div>
+      </Panel>
+
+      <Panel className="border-danger/30">
+        <PanelHeader className="border-danger/30 text-danger">
+          <span>Factory reset</span>
+        </PanelHeader>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <p className="max-w-md text-2xs leading-relaxed text-fg-muted">
+            Restores the board's defaults. Calibration data is kept separate, so
+            resetting settings will not force you to recalibrate.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="danger"
+              onClick={() => void factoryReset(SaveTarget.Performance)}
+            >
+              Reset actuation
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => void factoryReset(SaveTarget.Layout)}
+            >
+              Reset keymap
+            </Button>
+          </div>
+        </div>
+      </Panel>
     </div>
+  );
+}
+
+function ProfileNames({
+  profiles,
+  onRename,
+}: {
+  profiles: ReadonlyArray<{ index: number; name: string }>;
+  onRename: (index: number, name: string) => Promise<void>;
+}) {
+  return (
+    <Field
+      label="Profile names"
+      hint="Stored on the board, up to 32 bytes each."
+      control={
+        <div className="space-y-1.5">
+          {profiles.map((p) => (
+            <input
+              key={p.index}
+              defaultValue={p.name}
+              aria-label={`Name for profile ${p.index + 1}`}
+              maxLength={32}
+              onBlur={(e) => {
+                const next = e.target.value.trim();
+                if (next && next !== p.name) void onRename(p.index, next);
+              }}
+              className="h-7 w-full rounded-md border border-line bg-canvas-overlay px-2 text-xs text-fg transition-colors hover:border-line-strong focus:border-accent"
+            />
+          ))}
+        </div>
+      }
+    />
   );
 }
 

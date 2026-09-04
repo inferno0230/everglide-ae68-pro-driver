@@ -28,13 +28,14 @@ const TITLES: Record<SectionId, { title: string; blurb: string }> = {
     title: "Advanced keys",
     blurb: "Behaviours layered on top of a key: DKS, multi-point, tap/hold, SOCD.",
   },
+  macros: { title: "Macros", blurb: "" },
   calibration: {
     title: "Calibration",
     blurb: "Teach the board the true travel range of every switch.",
   },
   device: {
     title: "Device",
-    blurb: "Firmware, capabilities and lighting topology.",
+    blurb: "Firmware, capabilities and report rate.",
   },
 };
 

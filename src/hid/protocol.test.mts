@@ -10,8 +10,9 @@ import { pad64, readU16, u16le, mmToUm } from "./codec";
 import * as layout from "./protocol/layout";
 import * as perf from "./protocol/performance";
 import * as adv from "./protocol/higherkey";
+import * as mac from "./protocol/macro";
 import { HigherKeyMode, SocdMode } from "./protocol/constants";
-import { decodeCombo, describe as describeKey } from "./keycodes";
+import { decodeCombo, describe as describeKey, macroKeycode } from "./keycodes";
 
 let failures = 0;
 function check(name: string, fn: () => void): void {
@@ -176,6 +177,48 @@ check("Rappy-Snappy mirrors without a resolution byte", () => {
   assert.equal(readU16(b, 7), 0x07);
 });
 
+console.log("macros");
+
+check("action word packs status, delay and keycode", () => {
+  const action: mac.MacroAction = { down: true, delay: 32767, keycode: 0xf101 };
+  const word = mac.packAction(action);
+  // The sign bit must survive as an unsigned value.
+  assert.ok(word > 0, "packed word must be unsigned");
+  assert.deepEqual(mac.unpackAction(word), action);
+});
+
+check("key-up actions clear the status bit", () => {
+  const action: mac.MacroAction = { down: false, delay: 5, keycode: 44 };
+  assert.deepEqual(mac.unpackAction(mac.packAction(action)), action);
+});
+
+check("delay above 15 bits is rejected", () => {
+  assert.throws(() => mac.packAction({ down: true, delay: 32768, keycode: 4 }));
+});
+
+check("macro data round-trips through a page", () => {
+  const actions: mac.MacroAction[] = [
+    { down: true, delay: 0, keycode: 4 },
+    { down: false, delay: 12, keycode: 4 },
+    { down: true, delay: 100, keycode: 5 },
+  ];
+  const packet = mac.setMacroData(2, 0, actions);
+  const parsed = mac.parseMacroData(packet);
+  assert.equal(parsed.macroId, 2);
+  assert.equal(parsed.page, 0);
+  assert.deepEqual(parsed.actions.slice(0, 3), actions);
+});
+
+check("actions split into 15-per-page blocks", () => {
+  const actions = Array.from({ length: 31 }, () => ({
+    down: true,
+    delay: 1,
+    keycode: 4,
+  }));
+  const pages = mac.pageActions(actions);
+  assert.deepEqual(pages.map((p) => p.length), [15, 15, 1]);
+});
+
 console.log("keycodes");
 
 check("combo keycodes decode to modifiers plus a base key", () => {
@@ -184,6 +227,11 @@ check("combo keycodes decode to modifiers plus a base key", () => {
   assert.deepEqual(decodeCombo(0x1808), { modifiers: 8, base: 0x08 });
   assert.equal(describeKey(0x1808), "Win+E");
   assert.equal(describeKey(0x1329), "Ctrl+Shift+Esc");
+});
+
+check("macro keycodes sit at 0xF500 + id", () => {
+  assert.equal(macroKeycode(0), 0xf500);
+  assert.equal(macroKeycode(15), 0xf50f);
 });
 
 check("catalogued keycodes resolve to labels", () => {

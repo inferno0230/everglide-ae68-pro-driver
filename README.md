@@ -22,6 +22,8 @@ account, telemetry, or remote configuration service required.
 - Control keyboard and bottom-lighting effects, brightness, speed, direction,
   and palette.
 - Paint individual north/south key LEDs and all 40 bottom light-bar LEDs.
+- Switch and rename the keyboard's four onboard profiles.
+- Select report rates from 250 Hz to 8 kHz.
 - Inspect firmware, protocol, board, connection, and lighting information.
 - Explore the complete interface with a simulated keyboard.
 
@@ -104,6 +106,16 @@ Start calibration, press every key fully down, and allow each key to return
 fully. Finish the run only after all 68 keys have been exercised, then save the
 calibration from the sidebar.
 
+### Device settings
+
+The Device page shows hardware information, profile names, and report rate.
+Changing report rate restarts the keyboard's USB connection. The driver waits
+for it to return, reconnects automatically, and reloads the current state. If
+it does not return within 12 seconds, reconnect it from the device picker.
+
+Supported rates are 250 Hz, 500 Hz, 1 kHz, 2 kHz, 4 kHz, and 8 kHz. The
+keyboard does not provide a 125 Hz mode.
+
 ## Feature status
 
 | Area | Status |
@@ -116,10 +128,14 @@ calibration from the sidebar.
 | Per-key/per-LED colour | Working |
 | Advanced key behaviours | Working |
 | Calibration | Working |
+| Profiles and profile names | Working |
+| Report-rate changes and automatic reconnect | Working |
 | Simulated device | Working |
 
 ## TODO / not supported yet
 
+- [ ] Build the macro editor. The 16-slot macro protocol is implemented and
+  tested in the driver, but there is no interface for it yet.
 - [ ] Add profile backup and restore to a local file.
 - [ ] Add automated browser/UI tests in addition to protocol integration tests.
 - [ ] Add a release/deployment workflow.
@@ -147,6 +163,11 @@ Select **Save to keyboard**. Until then, edits are active only in RAM.
 
 WebHID permission belongs to the exact browser origin. A different hostname or
 development-server port counts as a different origin.
+
+**The keyboard disappears after changing report rate**
+
+A short USB restart is expected. Wait for automatic reconnection. If the error
+screen remains after 12 seconds, choose the keyboard again.
 
 ## Development
 
@@ -176,6 +197,8 @@ The production output is written to `dist/`. Device communication lives under
 - The application talks only to a locally connected HID device.
 - The source contains no analytics or network requests.
 - Firmware flashing is not implemented.
+- Factory-reset actions affect the selected keyboard configuration and should
+  be used deliberately.
 
 ## License
 

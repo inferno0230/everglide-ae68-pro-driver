@@ -305,7 +305,7 @@ export class SimulatedKeyboard {
       case Category.Device:
         return this.device(req, reply);
       case Category.Global:
-        return this.global(req, reply);
+        return this.global(req, reply, put16);
       case Category.LayoutAndKey:
         return this.layout(req, reply, put16);
       case Category.Performance:
@@ -347,7 +347,11 @@ export class SimulatedKeyboard {
     }
   }
 
-  private global(req: Uint8Array, reply: Uint8Array): Uint8Array {
+  private global(
+    req: Uint8Array,
+    reply: Uint8Array,
+    put16: (at: number, v: number) => void,
+  ): Uint8Array {
     switch (req[1]) {
       case 1: // factory reset
         for (const [key] of this.performance) {
@@ -407,6 +411,10 @@ export class SimulatedKeyboard {
         return reply;
       case 12: // rapid-trigger precision, 0.01mm
         reply[3] = 10;
+        return reply;
+      case 14: // macro space
+        reply[3] = 16;
+        put16(4, 2048);
         return reply;
       default:
         return reply;

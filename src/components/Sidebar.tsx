@@ -3,6 +3,7 @@ import {
   Keyboard as KeyboardIcon,
   Lightbulb,
   Layers,
+  ListOrdered,
   Cpu,
   Crosshair,
   HardDriveDownload,
@@ -11,7 +12,7 @@ import {
 } from "lucide-react";
 import { useDevice, type DirtyTarget } from "@/store/device";
 import { SaveTarget } from "@/hid/protocol/constants";
-import { Button, Settle, Tooltip } from "@/components/ui";
+import { Button, Select, Settle, Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 /** What each flash region is called in the interface. */
@@ -31,6 +32,7 @@ export type SectionId =
   | "keymap"
   | "lighting"
   | "advanced"
+  | "macros"
   | "calibration"
   | "device";
 
@@ -47,6 +49,7 @@ const NAV: NavItem[] = [
   { id: "keymap", label: "Keymap", icon: KeyboardIcon },
   { id: "lighting", label: "Lighting", icon: Lightbulb },
   { id: "advanced", label: "Advanced keys", icon: Layers },
+  { id: "macros", label: "Macros", icon: ListOrdered, pending: true },
   { id: "calibration", label: "Calibration", icon: Crosshair },
   { id: "device", label: "Device", icon: Cpu },
 ];
@@ -58,7 +61,7 @@ export function Sidebar({
   section: SectionId;
   onSection: (id: SectionId) => void;
 }) {
-  const { snapshot, status, simulated, dirty, saving, save, revision } =
+  const { snapshot, status, simulated, dirty, saving, save, switchProfile, revision } =
     useDevice();
   const connected = status === "connected";
   const pendingCount = dirty.size;
@@ -75,6 +78,28 @@ export function Sidebar({
             : "Not connected"}
         </p>
       </header>
+
+      {connected && snapshot ? (
+        <div className="border-b border-line px-3 py-2.5">
+          <label
+            htmlFor="profile"
+            className="mb-1 block text-2xs font-semibold tracking-wide text-fg-muted uppercase"
+          >
+            Profile
+          </label>
+          <Select
+            id="profile"
+            value={snapshot.activeProfile}
+            onChange={(e) => void switchProfile(Number(e.target.value))}
+          >
+            {snapshot.profiles.map((p) => (
+              <option key={p.index} value={p.index}>
+                {p.name || `Config ${p.index + 1}`}
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
 
       <ul className="flex-1 overflow-y-auto p-2">
         {NAV.map((item) => {
