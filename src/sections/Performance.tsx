@@ -539,6 +539,13 @@ function TravelControl({
   const { draft, drag, commit } = useSliderDraft(onCommit);
   const shown = draft ?? value;
 
+  // The editor is only rendered with a record, so an absent value means one
+  // thing: the selected keys disagree. That is the case multi-select exists
+  // for — the control shows no number, but setting one writes it to all of
+  // them. Disabling here would leave the board uneditable precisely when the
+  // user wants to bring the keys back into line.
+  const mixed = value === undefined;
+
   // While the field is being typed into, the text belongs to the user. A
   // number input hands back "" for a half-written "0.2", so reformatting on
   // every keystroke swallows the decimal point and micrometre precision can
@@ -561,7 +568,7 @@ function TravelControl({
             min={min}
             max={max}
             step={step}
-            disabled={disabled || value === undefined}
+            disabled={disabled}
             onValueChange={([v]) => drag(v ?? min)}
             onValueCommit={([v]) => {
               if (v !== undefined) commit(v);
@@ -585,7 +592,8 @@ function TravelControl({
                 inputMode="decimal"
                 size={5}
                 value={text}
-                disabled={disabled || value === undefined}
+                placeholder={mixed ? "—" : undefined}
+                disabled={disabled}
                 aria-label={`${label} in millimetres`}
                 aria-invalid={clamped || undefined}
                 onChange={(event) => {
