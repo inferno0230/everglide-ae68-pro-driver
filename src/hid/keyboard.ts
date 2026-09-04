@@ -11,6 +11,7 @@ import {
   AxisKind,
   Category,
   LAYER_COUNT,
+  LightArea,
   PROFILE_COUNT,
   SaveTarget,
 } from "./protocol/constants";
@@ -18,14 +19,94 @@ import * as device from "./protocol/device";
 import * as glob from "./protocol/global";
 import * as layout from "./protocol/layout";
 import * as perf from "./protocol/performance";
+import * as light from "./protocol/lighting";
+
+/** Shape advertised by the AE68 Pro when no topology is supplied by a caller. */
+const KEYBOARD_COLOR_GRID = { rows: 6, cols: 15 } as const;
+const LIGHT_BAR_COLOR_GRID = { rows: 1, cols: 40 } as const;
+
+type ColorGrid = { rows: number; cols: number };
+
+const colorGrid = (area: number, grid?: ColorGrid): ColorGrid =>
+  grid ??
+  (area === LightArea.Keyboard ? KEYBOARD_COLOR_GRID : LIGHT_BAR_COLOR_GRID);
+
+/** Keyboard rows use their measured 21-slot pitch; strips are contiguous. */
+const colorSlot = (
+  area: number,
+  grid: ColorGrid,
+  row: number,
+  col: number,
+): number =>
+  area === LightArea.Keyboard ? light.ledIndex(row, col) : row * grid.cols + col;
+
+/** A logical key normally has one slot; the spacebar fans out to five. */
+const colorSlots = (
+  area: number,
+  grid: ColorGrid,
+  row: number,
+  col: number,
+): number[] =>
+  area === LightArea.Keyboard
+    ? light.ledIndices(row, col)
+    : [colorSlot(area, grid, row, col)];
+
+const colorBufferLength = (area: number, grid: ColorGrid): number =>
+  grid.rows <= 0 || grid.cols <= 0
+    ? 0
+    : colorSlot(area, grid, grid.rows - 1, grid.cols - 1) + 1;
+
+const colorPages = (area: number, grid: ColorGrid): number =>
+  area === LightArea.Keyboard
+    ? light.KEY_COLOR_PAGES
+    : Math.ceil(colorBufferLength(area, grid) / light.KEYS_PER_PAGE);
+
+/** The pinned LEDs in a colour buffer, keyed `row:col`. */
+function pinned(
+  buffer: readonly light.KeyColor[],
+  area: number,
+  grid: ColorGrid,
+): Map<string, light.Rgb> {
+  const out = new Map<string, light.Rgb>();
+  for (let row = 0; row < grid.rows; row++) {
+    for (let col = 0; col < grid.cols; col++) {
+      // The extra spacebar positions are physical LEDs, not separate keys.
+      // Exposing them would make one spacebar appear as five painted keys and
+      // would let stale auxiliary colours overwrite a later spacebar paint.
+      if (
+        area === LightArea.Keyboard &&
+        light.isSpacebarAuxiliaryPosition(row, col)
+      ) {
+        continue;
+      }
+
+      const primary = buffer[colorSlot(area, grid, row, col)];
+      const entry = primary?.custom
+        ? primary
+        : colorSlots(area, grid, row, col)
+            .map((slot) => buffer[slot])
+            .find((candidate) => candidate?.custom);
+      if (entry?.custom) {
+        out.set(`${row}:${col}`, { r: entry.r, g: entry.g, b: entry.b });
+      }
+    }
+  }
+  return out;
+}
 
 /** Flash writes and calibration take noticeably longer than a read. */
 const SLOW: SendOptions = { timeout: 3000 };
 /** AxisData replies are only distinguishable by kind + row. */
 const AXIS: SendOptions = { matchBytes: 4, timeout: 500, retries: 1 };
+/** Paged lighting read-back is disambiguated by area + page. */
+const PAGED: SendOptions = { matchBytes: 4 };
 
 /** Matrix rows the board might populate. */
 const MAX_ROWS = 8;
+/** Pacing for fire-and-forget direct-drive packets. */
+const DIRECT_DRIVE_GAP_MS = 4;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export interface KeyboardProfile {
   index: number;
@@ -194,6 +275,150 @@ export class Keyboard {
     );
   }
 
+  // --- lighting ------------------------------------------------------------
+
+  async lightingBase(area: number = LightArea.Keyboard): Promise<light.LightingBase> {
+    return light.parseBase(await this.transport.send(light.getBase(area)));
+  }
+
+  async setLightingBase(
+    base: light.LightingBase,
+    area: number = LightArea.Keyboard,
+  ): Promise<light.LightingBase> {
+    return light.parseBase(
+      await this.transport.send(light.setBase(area, base)),
+    );
+  }
+
+  async palette(area: number = LightArea.Keyboard): Promise<light.PaletteSlot[]> {
+    return light.parsePalette(
+      await this.transport.send(light.getPalette(area)),
+    );
+  }
+
+  async setPalette(
+    slots: readonly light.PaletteSlot[],
+    area: number = LightArea.Keyboard,
+  ): Promise<void> {
+    await this.transport.send(light.setPalette(area, slots));
+  }
+
+  async correction(area: number = LightArea.Keyboard): Promise<light.Rgb> {
+    return light.parseCorrection(
+      await this.transport.send(light.getCorrection(area)),
+    );
+  }
+
+  async setCorrection(c: light.Rgb, area: number = LightArea.Keyboard): Promise<void> {
+    await this.transport.send(light.setCorrection(area, c));
+  }
+
+  /**
+   * The whole per-key colour buffer, one entry per addressable slot.
+   *
+   * The read reports the LEDs' *live* state, so most slots carry whatever the
+   * running effect is painting this instant; only `custom` marks a colour the
+   * board is actually holding. Callers that want the assignment rather than the
+   * animation should filter on it — see `customColors`.
+   */
+  async keyColorBuffer(
+    area: number = LightArea.Keyboard,
+    topology?: ColorGrid,
+  ): Promise<light.KeyColor[]> {
+    const grid = colorGrid(area, topology);
+    const colors: light.KeyColor[] = [];
+    for (let page = 0; page < colorPages(area, grid); page++) {
+      colors.push(
+        ...light.parseKeyColors(
+          await this.transport.send(light.getKeyColors(area, page), PAGED),
+        ),
+      );
+    }
+    return colors;
+  }
+
+  /** Just the keys pinned to a colour, keyed `row:col`. */
+  async customColors(
+    area: number = LightArea.Keyboard,
+    topology?: ColorGrid,
+  ): Promise<Map<string, light.Rgb>> {
+    const grid = colorGrid(area, topology);
+    return pinned(await this.keyColorBuffer(area, grid), area, grid);
+  }
+
+  /**
+   * Replace the per-key colour assignment for an area.
+   *
+   * The whole buffer goes every time, because a page write replaces a page: a
+   * key left out of the map is a key handed back to the effect. That is also
+   * how the vendor clears one — it rewrites everything with the flag off.
+   */
+  async setCustomColors(
+    colors: ReadonlyMap<string, light.Rgb>,
+    area: number = LightArea.Keyboard,
+    topology?: ColorGrid,
+  ): Promise<Map<string, light.Rgb>> {
+    const grid = colorGrid(area, topology);
+    const pageCount = colorPages(area, grid);
+    const slots: light.KeyColor[] = Array.from(
+      { length: pageCount * light.KEYS_PER_PAGE },
+      () => ({ r: 0, g: 0, b: 0, custom: false }),
+    );
+    for (const [id, rgb] of colors) {
+      const [row = 0, col = 0] = id.split(":").map(Number);
+      if (row < 0 || row >= grid.rows || col < 0 || col >= grid.cols) continue;
+      if (
+        area === LightArea.Keyboard &&
+        light.isSpacebarAuxiliaryPosition(row, col)
+      ) {
+        continue;
+      }
+      for (const slot of colorSlots(area, grid, row, col)) {
+        slots[slot] = { ...rgb, custom: true };
+      }
+    }
+    // The write echoes its own payload, and that echo is the reconciliation.
+    // Reading the buffer back instead would race the LED driver: for a beat
+    // after a write the read-back still reports the frame it was already
+    // painting, custom flags and all, so a fresh read says nothing was stored.
+    const stored: light.KeyColor[] = [];
+    for (let page = 0; page < pageCount; page++) {
+      const slice = slots.slice(
+        page * light.KEYS_PER_PAGE,
+        (page + 1) * light.KEYS_PER_PAGE,
+      );
+      const reply = await this.transport.send(
+        light.setKeyColors(area, page, slice),
+        PAGED,
+      );
+      stored.push(...light.parseKeyColors(reply));
+    }
+    return pinned(stored, area, grid);
+  }
+
+  /**
+   * Push per-key colours straight to the LEDs. These packets get no reply, so
+   * pace them or the board drops some.
+   */
+  async driveKeyColors(
+    colors: readonly light.KeyColor[],
+    area: number = LightArea.Keyboard,
+  ): Promise<void> {
+    const pages = Math.ceil(colors.length / light.KEYS_PER_PAGE);
+    for (let page = 0; page < pages; page++) {
+      const slice = colors.slice(
+        page * light.KEYS_PER_PAGE,
+        (page + 1) * light.KEYS_PER_PAGE,
+      );
+      await this.transport.sendNoReply(light.driveKeyColors(area, page, slice));
+      if (page < pages - 1) await sleep(DIRECT_DRIVE_GAP_MS);
+    }
+  }
+
+  async setCapsColor(c: light.Rgb): Promise<void> {
+    await this.transport.send(light.setCapsColor(c));
+  }
+
   // --- profiles, calibration, save -----------------------------------------
 
   async activeProfile(): Promise<number> {
@@ -223,5 +448,5 @@ export class Keyboard {
   }
 }
 
-export { Transport, codec, Category, AxisKind, SaveTarget };
-export { perf, layout, device, glob };
+export { Transport, codec, Category, AxisKind, SaveTarget, LightArea };
+export { perf, light, layout, device, glob };

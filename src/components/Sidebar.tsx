@@ -1,6 +1,7 @@
 import {
   Gauge,
   Keyboard as KeyboardIcon,
+  Lightbulb,
   Cpu,
   Crosshair,
   HardDriveDownload,
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 /** What each flash region is called in the interface. */
 const TARGET_NAMES: Partial<Record<DirtyTarget, string>> = {
   [SaveTarget.Performance]: "actuation",
+  [SaveTarget.Lighting]: "lighting",
   [SaveTarget.Layout]: "keymap",
   [SaveTarget.Calibration]: "calibration",
 };
@@ -25,6 +27,7 @@ const describeTargets = (dirty: ReadonlySet<DirtyTarget>): string =>
 export type SectionId =
   | "performance"
   | "keymap"
+  | "lighting"
   | "calibration"
   | "device";
 
@@ -39,6 +42,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { id: "performance", label: "Performance", icon: Gauge },
   { id: "keymap", label: "Keymap", icon: KeyboardIcon },
+  { id: "lighting", label: "Lighting", icon: Lightbulb },
   { id: "calibration", label: "Calibration", icon: Crosshair },
   { id: "device", label: "Device", icon: Cpu },
 ];

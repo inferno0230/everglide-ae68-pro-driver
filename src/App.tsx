@@ -6,6 +6,7 @@ import { TooltipProvider, Button, Badge } from "@/components/ui";
 import { Connect } from "@/sections/Connect";
 import { PerformanceSection } from "@/sections/Performance";
 import { KeymapSection } from "@/sections/Keymap";
+import { LightingSection } from "@/sections/Lighting";
 import { CalibrationSection } from "@/sections/Calibration";
 import { DeviceSection } from "@/sections/Device";
 
@@ -17,6 +18,10 @@ const TITLES: Record<SectionId, { title: string; blurb: string }> = {
   keymap: {
     title: "Keymap",
     blurb: "What each key sends, across four layers.",
+  },
+  lighting: {
+    title: "Lighting",
+    blurb: "Effect, brightness and the board's eight-slot palette.",
   },
   calibration: {
     title: "Calibration",
@@ -114,6 +119,8 @@ function Section({ id }: { id: SectionId }) {
       return <PerformanceSection />;
     case "keymap":
       return <KeymapSection />;
+    case "lighting":
+      return <LightingSection />;
     case "calibration":
       return <CalibrationSection />;
     case "device":

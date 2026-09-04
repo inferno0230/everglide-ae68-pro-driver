@@ -14,6 +14,21 @@
 import { REPORT_SIZE } from "./codec";
 import { Category } from "./protocol/constants";
 
+/** The per-key colour buffer's shape. See .codex/reverse/PROTOCOL.md section 8. */
+const KEYS_PER_PAGE = 15;
+const KEYBOARD_COLOR_PAGES = 9;
+const LIGHT_BAR_LEDS = 40;
+const LIGHT_BAR_COLOR_PAGES = Math.ceil(LIGHT_BAR_LEDS / KEYS_PER_PAGE);
+const LED_ROW_PITCH = 21;
+const LED_ROWS = 6;
+
+/** The keyboard is a pitched matrix; the decorative bar is linear. */
+const isLedSlot = (zone: number, slot: number): boolean =>
+  zone === 0
+    ? Math.floor(slot / LED_ROW_PITCH) < LED_ROWS &&
+      slot % LED_ROW_PITCH < KEYS_PER_PAGE
+    : zone === 1 && slot < LIGHT_BAR_LEDS;
+
 type Listener = (event: HIDInputReportEvent) => void;
 
 /** Physical layout of the AE68 Pro, row by row: [label keycode, x, width]. */
@@ -106,6 +121,19 @@ interface SimPerformance {
   axisCoefficient: number;
 }
 
+function defaultPalette() {
+  return [
+    { b: 0, g: 0, r: 0, h: 0 }, // slot 0 is the "cycle hues" slot
+    { b: 60, g: 60, r: 247, h: 0 },
+    { b: 80, g: 185, r: 63, h: 85 },
+    { b: 34, g: 153, r: 210, h: 40 },
+    { b: 247, g: 129, r: 47, h: 210 },
+    { b: 200, g: 80, r: 200, h: 300 },
+    { b: 255, g: 255, r: 255, h: 0 },
+    { b: 120, g: 200, r: 255, h: 30 },
+  ];
+}
+
 const defaultPerformance = (): SimPerformance => ({
   mode: 0,
   press: 1200,
@@ -139,6 +167,36 @@ export class SimulatedKeyboard {
   private profileNames = ["Config 1", "Config 2", "Config 3", "Config 4"];
   private reportRateCode = 3;
   private calibrating = false;
+
+  /**
+   * Individually pinned colour, per area, indexed the way the board does: the
+   * keyboard uses a 21-slot row pitch while the 40-LED bar is contiguous.
+   *
+   * The padding is modelled rather than smoothed over, because a driver that
+   * assumes physical key order still *looks* correct against a forgiving fake
+   * and paints the wrong keys on real hardware.
+   */
+  private keyColors: Record<number, Map<number, [number, number, number]>> = {
+    0: new Map(),
+    1: new Map(),
+  };
+
+  /**
+   * Lighting is per area: 0 is the keyboard (dual-face, 20 effects), 1 the
+   * 40-LED bar (single on/off, 5 effects).
+   */
+  private lighting: Record<number, {
+    open: number; effect: number; brightness: number;
+    speed: number; direction: number; paletteSlot: number;
+  }> = {
+    0: { open: 3, effect: 14, brightness: 80, speed: 60, direction: 0, paletteSlot: 0 },
+    1: { open: 0, effect: 0, brightness: 100, speed: 40, direction: 0, paletteSlot: 0 },
+  };
+  private paletteByArea: Record<number, Array<{ b: number; g: number; r: number; h: number }>> = {
+    0: defaultPalette(),
+    1: defaultPalette(),
+  };
+  private correction = { r: 255, g: 255, b: 255 };
 
   constructor() {
     for (let r = 1; r < LAYOUT.length; r++) {
@@ -243,6 +301,8 @@ export class SimulatedKeyboard {
         return this.layout(req, reply, put16);
       case Category.Performance:
         return this.perf(req, reply, put16);
+      case Category.Lighting:
+        return this.light(req, reply);
       default:
         return reply;
     }
@@ -465,6 +525,95 @@ export class SimulatedKeyboard {
       default:
         return reply;
     }
+  }
+
+  private light(req: Uint8Array, reply: Uint8Array): Uint8Array | null {
+    const rw = req[1];
+    const config = req[3];
+
+    if (rw === 5) return null; // direct drive is fire-and-forget
+    if (rw === 6) return reply;
+
+    if (rw === 3 || rw === 4) {
+      const zone = req[2] ?? 0;
+      const page = req[3] ?? 0;
+      const pages = zone === 0 ? KEYBOARD_COLOR_PAGES : LIGHT_BAR_COLOR_PAGES;
+      if (page >= pages) return null;
+      const held = this.keyColors[zone] ?? this.keyColors[0]!;
+
+      for (let i = 0; i < KEYS_PER_PAGE; i++) {
+        const slot = page * KEYS_PER_PAGE + i;
+        const at = 4 + i * 4;
+        if (rw === 4) {
+          // A write only lands on a slot the hardware actually drives.
+          if (isLedSlot(zone, slot)) {
+            if (req[at + 3] === 0xff) {
+              held.set(slot, [req[at] ?? 0, req[at + 1] ?? 0, req[at + 2] ?? 0]);
+            } else {
+              held.delete(slot);
+            }
+          }
+          reply.set(req.subarray(at, at + 4), at);
+        } else {
+          const c = held.get(slot);
+          if (c) reply.set([c[0], c[1], c[2], 0xff], at);
+        }
+      }
+      return reply;
+    }
+
+    const area = req[2] ?? 0;
+    const state = this.lighting[area] ?? this.lighting[0]!;
+    const pal = this.paletteByArea[area] ?? this.paletteByArea[0]!;
+
+    if (rw === 1) {
+      if (config === 0) {
+        const l = state;
+        reply.set(
+          [l.open, l.effect, l.brightness, l.speed, l.direction, l.paletteSlot],
+          4,
+        );
+      } else if (config === 1) {
+        pal.forEach((s, i) => reply.set([s.b, s.g, s.r, s.h], 4 + i * 4));
+      } else if (config === 2) {
+        const c = this.correction;
+        reply.set([c.r, c.g, c.b], 4);
+      }
+      return reply;
+    }
+
+    if (rw === 2) {
+      if (config === 0) {
+        this.lighting[area] = {
+          open: req[4] ?? 0,
+          effect: req[5] ?? 0,
+          brightness: req[6] ?? 0,
+          speed: req[7] ?? 0,
+          direction: req[8] ?? 0,
+          paletteSlot: req[9] ?? 0,
+        };
+        const l = this.lighting[area]!;
+        reply.set(
+          [l.open, l.effect, l.brightness, l.speed, l.direction, l.paletteSlot],
+          4,
+        );
+      } else if (config === 1) {
+        this.paletteByArea[area] = pal.map((_, i) => ({
+          b: req[4 + i * 4] ?? 0,
+          g: req[5 + i * 4] ?? 0,
+          r: req[6 + i * 4] ?? 0,
+          h: req[7 + i * 4] ?? 0,
+        }));
+      } else if (config === 2) {
+        this.correction = {
+          r: req[4] ?? 0,
+          g: req[5] ?? 0,
+          b: req[6] ?? 0,
+        };
+      }
+      return reply;
+    }
+    return reply;
   }
 
   get isCalibrating(): boolean {

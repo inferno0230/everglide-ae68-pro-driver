@@ -99,6 +99,9 @@ export function KeyboardView({
   keys,
   selection,
   onSelect,
+  onPaint,
+  onPaintEnd,
+  onClear,
   label,
   state,
   scale = 1,
@@ -108,6 +111,16 @@ export function KeyboardView({
   keys: readonly PhysicalKey[];
   selection: ReadonlySet<string>;
   onSelect?: (id: string, additive: boolean) => void;
+  /**
+   * Painting, which is a drag and not a click: crossing a key with the button
+   * already down has to count, or colouring a row means 15 separate clicks.
+   * Called once per key entered, never twice for the same key in one stroke.
+   */
+  onPaint?: (id: string) => void;
+  /** End of a stroke. Buffer the keys and write them here, not per key. */
+  onPaintEnd?: () => void;
+  /** Right-click, the vendor's own gesture for handing a key back. */
+  onClear?: (id: string) => void;
   /** The cap legend. */
   label: (key: KeyGeometry) => React.ReactNode;
   state?: (key: KeyGeometry) => KeyRenderState | undefined;
@@ -117,7 +130,32 @@ export function KeyboardView({
 }) {
   const { geometry, rows, widthUnits } = useGeometry(keys);
   const unit = UNIT * scale;
-  const interactive = Boolean(onSelect);
+  const interactive = Boolean(onSelect) || Boolean(onPaint);
+
+  // A stroke is held on the window, not on a key: the pointer leaves the key
+  // it went down on immediately, and it has to end even if the button comes up
+  // somewhere off the board entirely.
+  const stroke = React.useRef<{ live: boolean; last: string | null }>({
+    live: false,
+    last: null,
+  });
+  const endStroke = React.useRef<(() => void) | undefined>(undefined);
+  endStroke.current = onPaintEnd;
+
+  React.useEffect(() => {
+    if (!onPaint) return;
+    const stop = () => {
+      if (!stroke.current.live) return;
+      stroke.current = { live: false, last: null };
+      endStroke.current?.();
+    };
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    return () => {
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+  }, [onPaint]);
 
   if (geometry.length === 0) return null;
 
@@ -146,6 +184,29 @@ export function KeyboardView({
             interactive={interactive}
             state={s}
             onSelect={onSelect}
+            onPaintStart={
+              onPaint
+                ? (id) => {
+                    stroke.current = { live: true, last: id };
+                    onPaint(id);
+                  }
+                : undefined
+            }
+            onPaintEnter={
+              onPaint
+                ? (id) => {
+                    // `pointerover` bubbles, so it also arrives from the cap's
+                    // own children; and a stroke can wander back onto a key it
+                    // already covered. Both are the same key twice.
+                    if (!stroke.current.live || stroke.current.last === id) {
+                      return;
+                    }
+                    stroke.current.last = id;
+                    onPaint(id);
+                  }
+                : undefined
+            }
+            onClear={onClear}
           >
             {label(key)}
           </KeyCap>
@@ -163,6 +224,9 @@ function KeyCap({
   interactive,
   state,
   onSelect,
+  onPaintStart,
+  onPaintEnter,
+  onClear,
   children,
 }: {
   geometry: KeyGeometry;
@@ -172,6 +236,9 @@ function KeyCap({
   interactive: boolean;
   state: KeyRenderState | undefined;
   onSelect: ((id: string, additive: boolean) => void) | undefined;
+  onPaintStart: ((id: string) => void) | undefined;
+  onPaintEnter: ((id: string) => void) | undefined;
+  onClear: ((id: string) => void) | undefined;
   children: React.ReactNode;
 }) {
   const width = geometry.width * unit - GAP;
@@ -273,6 +340,24 @@ function KeyCap({
       className={shell}
       style={style}
       onClick={(e) => onSelect?.(geometry.id, e.shiftKey || e.metaKey || e.ctrlKey)}
+      onPointerDown={
+        onPaintStart
+          ? (e) => {
+              if (e.button === 0) onPaintStart(geometry.id);
+            }
+          : undefined
+      }
+      // `pointerover`, not `pointerenter`: enter/leave are not delegated the
+      // way the bubbling pair is, and do not survive a drag reliably.
+      onPointerOver={onPaintEnter ? () => onPaintEnter(geometry.id) : undefined}
+      onContextMenu={
+        onClear
+          ? (e) => {
+              e.preventDefault();
+              onClear(geometry.id);
+            }
+          : undefined
+      }
     >
       {content}
     </button>

@@ -17,6 +17,9 @@ account, telemetry, or remote configuration service required.
 - Remap four layers: Main, Fn1, Fn2, and Fn3.
 - Assign keyboard, media, mouse, control, lighting, and gamepad keycodes.
 - Run and monitor full-key switch calibration.
+- Control keyboard and bottom-lighting effects, brightness, speed, direction,
+  and palette.
+- Paint individual north/south key LEDs and all 40 bottom light-bar LEDs.
 - Inspect firmware, protocol, board, connection, and lighting information.
 - Explore the complete interface with a simulated keyboard.
 
@@ -76,6 +79,17 @@ are grouped into keyboard, media, mouse, control, lighting, and gamepad
 categories. Keyboard assignments are further arranged as letters, numbers,
 symbols, function keys, and extra keys.
 
+### Lighting
+
+The keyboard and bottom light bar are separate lighting areas. Effect settings
+are rendered by the keyboard itself; the preview intentionally shows only
+colours explicitly assigned to individual keys or LEDs.
+
+Enable **Per-key colour** or **Per-LED colour** to reveal the addressable
+preview. Drag to paint and right-click an address to return it to the active
+effect. The keyboard supports interactive modes L18–L20: pressed region,
+vertical column, and water-ripple reactions.
+
 ### Calibration
 
 Start calibration, press every key fully down, and allow each key to return
@@ -90,6 +104,8 @@ calibration from the sidebar.
 | Performance and rapid trigger | Working |
 | Live switch travel | Working |
 | Four-layer keymap | Working |
+| Keyboard and bottom RGB | Working |
+| Per-key/per-LED colour | Working |
 | Calibration | Working |
 | Simulated device | Working |
 

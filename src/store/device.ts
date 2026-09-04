@@ -3,6 +3,7 @@ import { Transport, HidError } from "@/hid/transport";
 import { Keyboard, type DeviceSnapshot } from "@/hid/keyboard";
 import { createSimulatedDevice } from "@/hid/simulator";
 import type { Performance } from "@/hid/protocol/performance";
+import type { LightingBase, PaletteSlot, Rgb } from "@/hid/protocol/lighting";
 import {
   AxisKind,
   KeyMode,
@@ -38,6 +39,17 @@ interface DeviceState {
   /** keymap[layer][row][col] */
   keymap: number[][][];
   performance: Map<string, Performance>;
+  /** Lighting is per area: 0 is the keyboard, 1 the light bar. */
+  lighting: Record<number, LightingBase>;
+  palette: Record<number, PaletteSlot[]>;
+  /**
+   * Individually pinned colours per lighting area, keyed `row:col`.
+   *
+   * Only LEDs actually held by the board are present. The read reports live
+   * state for everything else, so an unpinned LED is absent rather than
+   * carrying whatever frame the effect happened to be on.
+   */
+  lightColors: Record<number, Map<string, Rgb>>;
 
   selection: Set<string>;
   layer: number;
@@ -77,6 +89,14 @@ interface DeviceState {
     patch: Partial<Performance>,
   ) => Promise<void>;
   writeKeycode: (row: number, col: number, keycode: number) => Promise<void>;
+  writeLighting: (area: number, patch: Partial<LightingBase>) => Promise<void>;
+  writePalette: (area: number, slots: PaletteSlot[]) => Promise<void>;
+  /** Pin LEDs in an area to a colour, or hand them back to its effect. */
+  paintLights: (
+    area: number,
+    ids: readonly string[],
+    color: Rgb | null,
+  ) => Promise<void>;
 
   save: () => Promise<void>;
   runCalibration: (phase: "start" | "stop") => Promise<void>;
@@ -102,6 +122,9 @@ export const useDevice = create<DeviceState>((set, get) => ({
   snapshot: null,
   keymap: [],
   performance: new Map(),
+  lighting: {},
+  palette: {},
+  lightColors: {},
   selection: new Set(),
   layer: 0,
   dirty: new Set(),
@@ -147,6 +170,9 @@ export const useDevice = create<DeviceState>((set, get) => ({
       snapshot: null,
       keymap: [],
       performance: new Map(),
+      lighting: {},
+      palette: {},
+      lightColors: {},
       selection: new Set(),
       dirty: new Set(),
       clamped: new Set(),
@@ -233,6 +259,72 @@ export const useDevice = create<DeviceState>((set, get) => ({
       set({ busy: false });
     }
   },
+
+  async writeLighting(area, patch) {
+    const current = get().lighting[area];
+    if (!current) return;
+    set({ busy: true });
+    try {
+      const stored = await keyboard.setLightingBase({ ...current, ...patch }, area);
+      set({
+        lighting: { ...get().lighting, [area]: stored },
+        revision: bumped(get().revision, [`lighting:${area}`]),
+        dirty: withDirty(get().dirty, SaveTarget.Lighting),
+      });
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false });
+    }
+  },
+
+  async writePalette(area, slots) {
+    set({ busy: true });
+    try {
+      await keyboard.setPalette(slots, area);
+      set({
+        palette: { ...get().palette, [area]: slots },
+        dirty: withDirty(get().dirty, SaveTarget.Lighting),
+      });
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false });
+    }
+  },
+
+  /**
+   * Paint individual LEDs, or clear them.
+   *
+   * A page write replaces a page, so the board only keeps what the last write
+   * contained — there is no per-key update. The whole map goes every time,
+   * which is also how the vendor clears a single key.
+   */
+  async paintLights(area, ids, color) {
+    const zone = get().snapshot?.ledZones.find((candidate) => candidate.index === area);
+    if (!zone) return;
+    const next = new Map(get().lightColors[area]);
+    for (const id of ids) {
+      if (color) next.set(id, color);
+      else next.delete(id);
+    }
+    set({ busy: true });
+    try {
+      set({
+        lightColors: {
+          ...get().lightColors,
+          [area]: await keyboard.setCustomColors(next, area, zone),
+        },
+        revision: bumped(get().revision, [`lighting:${area}`]),
+        dirty: withDirty(get().dirty, SaveTarget.Lighting),
+      });
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false });
+    }
+  },
+
   async save() {
     if (get().dirty.size === 0) return;
     set({ saving: true });
@@ -352,10 +444,24 @@ async function reload(): Promise<void> {
     );
   }
 
+  // Every zone the board reports gets its own base record and palette; the
+  // light bar keeps settings entirely separate from the keyboard.
+  const lighting: Record<number, LightingBase> = {};
+  const palette: Record<number, PaletteSlot[]> = {};
+  const lightColors: Record<number, Map<string, Rgb>> = {};
+  for (const zone of snapshot.ledZones) {
+    lighting[zone.index] = await keyboard.lightingBase(zone.index);
+    palette[zone.index] = await keyboard.palette(zone.index);
+    lightColors[zone.index] = await keyboard.customColors(zone.index, zone);
+  }
+
   set({
     snapshot,
     keymap,
     performance,
+    lighting,
+    palette,
+    lightColors,
     clamped: new Set(),
   });
 }
