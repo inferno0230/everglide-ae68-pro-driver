@@ -4,6 +4,8 @@ An unofficial, local web configurator for the **Everglide AE68 Pro** magnetic
 keyboard. It communicates directly with the keyboard through WebHID—no vendor
 account, telemetry, or remote configuration service required.
 
+**[Open the hosted driver](https://inferno0230.github.io/everglide-ae68-pro-driver/)**
+
 > [!IMPORTANT]
 > This is an independent community project. It is not affiliated with or
 > endorsed by Everglide, Sparklink, or PlayJoy. It currently targets the AE68
