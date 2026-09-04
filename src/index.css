@@ -1,0 +1,246 @@
+@import "tailwindcss";
+
+/*
+ * GitHub dark, played straight. Values are GitHub's own Primer dark palette —
+ * the craft bar named in .codex/docs/PRODUCT.md — not an approximation of it.
+ */
+@theme {
+  /* Grounds, darkest to lightest. */
+  --color-canvas-inset: #010409;
+  --color-canvas: #0d1117;
+  --color-canvas-subtle: #161b22;
+  --color-canvas-raised: #1c2128;
+  --color-canvas-overlay: #21262d;
+
+  /* Borders. `muted` is the hairline that divides; `default` is the one you see. */
+  --color-line-muted: #21262d;
+  --color-line: #30363d;
+  --color-line-strong: #444c56;
+
+  /* Text. */
+  --color-fg: #e6edf3;
+  --color-fg-muted: #8b949e;
+  --color-fg-subtle: #6e7681;
+  --color-fg-on-accent: #ffffff;
+
+  /* The single accent. Reserved for the active thing and the primary action. */
+  --color-accent: #2f81f7;
+  --color-accent-emphasis: #1f6feb;
+  --color-accent-muted: #388bfd66;
+  --color-accent-subtle: #388bfd1a;
+
+  /* Functional only: device state, never decoration. */
+  --color-success: #3fb950;
+  --color-success-subtle: #3fb9501a;
+  --color-attention: #d29922;
+  --color-attention-subtle: #d299221a;
+  --color-danger: #f85149;
+  --color-danger-subtle: #f851491a;
+
+  /* GitHub's own stacks. The canon's face is the system face. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+    Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  /*
+   * Sized for a 27" monitor at 100%. Body sits at GitHub's own 14px; the first
+   * pass ran a step below that and read as cramped at arm's length.
+   */
+  --text-3xs: 0.75rem; /* 12px — the smallest thing we set */
+  --text-2xs: 0.8125rem; /* 13px — dense labels */
+  --text-xs: 0.875rem; /* 14px — controls */
+  --text-sm: 0.9375rem; /* 15px — body */
+  --text-base: 1.0625rem; /* 17px */
+
+  /* Scales every spacing-derived utility, so boxes grow with their contents. */
+  --spacing: 0.28125rem; /* was 0.25rem */
+
+  --radius-sm: 0.25rem;
+  --radius: 0.375rem;
+  --radius-lg: 0.5rem;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * The surfaces we did not draw. Left to the browser these ship defaults that
+   * belong to no design system, and they are the cheapest tell that a page was
+   * assembled rather than built.
+   */
+  ::selection {
+    background-color: var(--color-accent-muted);
+    color: var(--color-fg);
+  }
+
+  * {
+    caret-color: var(--color-accent);
+  }
+
+  * {
+    scrollbar-color: var(--color-line-strong) transparent;
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-line-strong);
+    border: 2px solid var(--color-canvas);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-fg-subtle);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* One focus ring for the whole app, keyboard-only. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -1px;
+    border-radius: var(--radius-sm);
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /*
+   * The native select popup is drawn by the OS from the option elements, not
+   * from the select. Left unstyled it renders white on a dark page.
+   */
+  option,
+  optgroup {
+    background-color: var(--color-canvas-overlay);
+    color: var(--color-fg);
+  }
+
+  a {
+    color: var(--color-accent);
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+
+  /*
+   * Every measurement in this app is compared against the one above it — a
+   * column of travel values that shifts as digits change is unreadable.
+   */
+  .tnum,
+  input[type="number"],
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /*
+   * The one authored motion in the app: the board answering.
+   *
+   * Every write here round-trips — the app asks, the firmware stores (sometimes
+   * something else), and the reply is what the interface shows. That
+   * reconciliation is the whole claim this tool makes over the vendor's, and
+   * without motion it happens in silence: the number simply is what it is.
+   *
+   * So a value arriving from the device gets a wash behind it that decays. One
+   * keyframe, tinted by the element it sits on, so the same gesture reads at
+   * every scale: `accent` when the board stored what was asked, `danger` when
+   * it stored something else, `success` on the save footer when volatile work
+   * becomes durable. It fades opacity rather than interpolating a colour, which
+   * keeps one keyframe honest across all three tones and off the paint path.
+   */
+  @keyframes settle {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  .animate-settle {
+    animation: settle 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /* The footer commit is the same wash, held a beat longer for its size. */
+  .animate-settle-slow {
+    animation: settle 1400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  /*
+   * An advanced-key badge wipes up from the cap edge it is anchored to, rather
+   * than popping: the mode attaches to the key, it does not arrive on top of it.
+   */
+  @keyframes badge-in {
+    from {
+      clip-path: inset(100% 0 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  .animate-badge-in {
+    animation: badge-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes pulse-ring {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  .animate-pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /*
+   * Reduced motion keeps the meaning and drops the performance.
+   *
+   * The wash is the app's only signal that the firmware answered — and, in its
+   * danger tone, that it answered with a different number — so it stays. It
+   * just holds still and then goes, instead of easing out over a second. The
+   * badge stops wiping and simply appears. Only the decorative loop is
+   * genuinely removed.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-settle,
+    .animate-settle-slow {
+      animation: settle 1ms linear 400ms forwards;
+    }
+
+    .animate-badge-in {
+      animation: none;
+    }
+
+    .animate-pulse-ring {
+      animation: none;
+    }
+  }
+}

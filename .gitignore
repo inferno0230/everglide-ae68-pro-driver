@@ -1,0 +1,25 @@
+# build output / deps (when the driver is rebuilt)
+node_modules/
+dist/
+build/
+web/
+*.log
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# editors / os
+.vscode/
+.idea/
+.DS_Store
+*.local
+
+# LLM 
+.agents/
+.claude/
+.codex/
+.impeccable/
+skills-lock.json
