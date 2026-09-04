@@ -9,6 +9,7 @@ import {
   HardDriveDownload,
   Loader2,
   Check,
+  Github,
 } from "lucide-react";
 import { useDevice, type DirtyTarget } from "@/store/device";
 import { SaveTarget } from "@/hid/protocol/constants";
@@ -69,14 +70,28 @@ export function Sidebar({
   return (
     <nav className="flex w-[248px] shrink-0 flex-col border-r border-line bg-canvas-inset">
       <header className="border-b border-line px-3 py-3">
-        <h1 className="text-sm font-semibold text-fg">AE68 Pro</h1>
-        <p className="mt-0.5 truncate text-2xs text-fg-muted">
-          {connected
-            ? simulated
-              ? "Simulated board"
-              : `Firmware ${snapshot?.info.appVersion ?? "—"}`
-            : "Not connected"}
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-sm font-semibold text-fg">AE68 Pro</h1>
+            <p className="mt-0.5 truncate text-2xs text-fg-muted">
+              {connected
+                ? simulated
+                  ? "Simulated board"
+                  : `Firmware ${snapshot?.info.appVersion ?? "—"}`
+                : "Not connected"}
+            </p>
+          </div>
+          <a
+            href="https://github.com/inferno0230/everglide-ae68-pro-driver"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="View source on GitHub"
+            title="View source on GitHub"
+            className="shrink-0 rounded-md p-1.5 text-fg-muted transition-colors hover:bg-canvas-overlay hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg-muted"
+          >
+            <Github size={20} strokeWidth={1.75} />
+          </a>
+        </div>
       </header>
 
       {connected && snapshot ? (

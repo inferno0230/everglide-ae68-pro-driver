@@ -1,4 +1,10 @@
-import { Usb, TriangleAlert, Loader2, FlaskConical } from "lucide-react";
+import {
+  Usb,
+  TriangleAlert,
+  Loader2,
+  FlaskConical,
+  Github,
+} from "lucide-react";
 import { useDevice } from "@/store/device";
 import { Button, Panel } from "@/components/ui";
 
@@ -96,6 +102,16 @@ export function Connect() {
             Open demo
           </Button>
         </div>
+
+        <a
+          href="https://github.com/inferno0230/everglide-ae68-pro-driver"
+          target="_blank"
+          rel="noreferrer"
+          className="mx-auto mt-4 flex w-fit items-center gap-1.5 text-2xs text-fg-muted transition-colors hover:text-fg"
+        >
+          <Github size={13} strokeWidth={1.75} />
+          View source on GitHub
+        </a>
       </div>
     </div>
   );
