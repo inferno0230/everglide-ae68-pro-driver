@@ -78,10 +78,12 @@ export interface KeyRenderState {
   level?: number;
   /** Right-hand corner mark: unsaved, clamped, etc. */
   mark?: "dirty" | "clamped" | "custom";
-  /** Plain status text shown in the top-right corner of the key. */
-  topRight?: string;
+  /** Plain status text shown in the top-left corner of the key. */
+  topLeft?: string;
   /** Plain status text shown in the bottom-left corner of the key. */
   bottomLeft?: string;
+  /** Plain status text shown in the bottom-right corner of the key. */
+  bottomRight?: string;
   /**
    * A short tag along the bottom of the cap — the vendor's own affordance for
    * "this key does something beyond its legend", and the only way to read an
@@ -291,15 +293,21 @@ function KeyCap({
         </span>
       ) : null}
 
-      {state?.topRight ? (
-        <span className="absolute top-1 right-1 z-10 text-3xs leading-none font-semibold text-accent">
-          {state.topRight}
+      {state?.topLeft ? (
+        <span className="absolute top-1 left-1 z-10 text-[10px] leading-none font-normal text-fg-subtle">
+          {state.topLeft}
         </span>
       ) : null}
 
       {state?.bottomLeft ? (
-        <span className="absolute bottom-1 left-1 z-10 text-3xs leading-none font-medium text-fg-subtle">
+        <span className="absolute bottom-1 left-1 z-10 text-[10px] leading-none font-normal text-fg-subtle">
           {state.bottomLeft}
+        </span>
+      ) : null}
+
+      {state?.bottomRight ? (
+        <span className="absolute right-1 bottom-1 z-10 text-[10px] leading-none font-semibold text-accent">
+          {state.bottomRight}
         </span>
       ) : null}
 
@@ -307,8 +315,7 @@ function KeyCap({
         <span
           aria-hidden
           className={cn(
-            "absolute top-1 z-10 h-1.5 w-1.5 rounded-full",
-            state.topRight ? "left-1" : "right-1",
+            "absolute top-1 right-1 z-10 h-1.5 w-1.5 rounded-full",
             state.mark === "dirty" && "bg-attention",
             state.mark === "clamped" && "bg-danger",
             state.mark === "custom" && "bg-accent",

@@ -93,19 +93,19 @@ export function PerformanceSection() {
       const config = performance.get(key.id);
       const hasDeadZone =
         config && (config.pressDead > 0 || config.releaseDead > 0);
-      const deadZone = hasDeadZone
-        ? config.pressDead === config.releaseDead
-          ? mm(config.pressDead)
-          : `${mm(config.pressDead)}/${mm(config.releaseDead)}`
-        : undefined;
 
       return {
         ...(live && um !== undefined
           ? { level: Math.min(1, um / MAX_TRAVEL_UM) }
           : {}),
         ...(clamped.has(key.id) ? { mark: "clamped" as const } : {}),
-        ...(config?.mode === 1 ? { topRight: "RT" } : {}),
-        ...(deadZone ? { bottomLeft: deadZone } : {}),
+        ...(hasDeadZone
+          ? {
+              topLeft: mm(config.pressDead),
+              bottomLeft: mm(config.releaseDead),
+            }
+          : {}),
+        ...(config?.mode === 1 ? { bottomRight: "RT" } : {}),
       };
     },
     [travel, live, clamped, performance],
@@ -215,41 +215,39 @@ function PerformanceKeyGuide() {
         Performance settings appear in the corners of each key.
       </p>
 
-      <div className="mt-3 grid grid-cols-[3.5rem_1fr] items-center gap-3">
-        <div
-          className="relative h-14 w-14 shrink-0 rounded-[4px] bg-canvas-overlay text-3xs ring-1 ring-inset ring-line"
-          aria-hidden
-        >
-          <span className="absolute top-1.5 right-1.5 font-semibold text-accent">
-            RT
-          </span>
-          <span className="absolute bottom-1.5 left-1.5 font-medium text-fg-subtle">
-            0.10
-          </span>
-        </div>
-        <div className="space-y-2.5">
-          <div>
-            <p className="text-3xs font-semibold tracking-wide text-fg-subtle uppercase">
-              Top right
-            </p>
-            <p className="mt-0.5 text-2xs text-fg-muted">
-              <span className="font-semibold text-accent">RT</span> means rapid
-              trigger is on.
-            </p>
-          </div>
-          <div>
-            <p className="text-3xs font-semibold tracking-wide text-fg-subtle uppercase">
-              Bottom left
-            </p>
-            <p className="mt-0.5 text-2xs text-fg-muted">
-              Dead-zone travel in mm.
-            </p>
-          </div>
-        </div>
+      <div className="relative mx-auto mt-3 h-16 w-16 rounded-[4px] bg-canvas-overlay text-3xs ring-1 ring-inset ring-line" aria-hidden>
+        <span className="absolute top-1.5 left-1.5 text-[10px] font-normal text-fg-subtle">
+          0.10
+        </span>
+        <span className="absolute bottom-1.5 left-1.5 text-[10px] font-normal text-fg-subtle">
+          0.20
+        </span>
+        <span className="absolute right-1.5 bottom-1.5 text-[10px] font-semibold text-accent">
+          RT
+        </span>
       </div>
 
-      <p className="mt-3 border-t border-line pt-2 text-3xs leading-relaxed text-fg-subtle">
-        Two values such as 0.10/0.20 mean top/bottom dead zone.
+      <dl className="mt-3 grid grid-cols-[5.5rem_1fr] items-baseline gap-x-2 gap-y-2 text-2xs">
+        <dt className="whitespace-nowrap text-[10px] font-semibold tracking-wide text-fg-subtle uppercase">
+          Top left
+        </dt>
+        <dd className="text-fg-muted">Top dead zone</dd>
+
+        <dt className="whitespace-nowrap text-[10px] font-semibold tracking-wide text-fg-subtle uppercase">
+          Bottom left
+        </dt>
+        <dd className="text-fg-muted">Bottom dead zone</dd>
+
+        <dt className="whitespace-nowrap text-[10px] font-semibold tracking-wide text-fg-subtle uppercase">
+          Bottom right
+        </dt>
+        <dd className="text-fg-muted">
+          <span className="font-semibold text-accent">RT</span> enabled
+        </dd>
+      </dl>
+
+      <p className="mt-3 border-t border-line pt-2 text-3xs text-fg-subtle">
+        Dead-zone values are shown in millimetres.
       </p>
     </aside>
   );
