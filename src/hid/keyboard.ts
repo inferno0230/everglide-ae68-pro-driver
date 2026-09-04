@@ -141,6 +141,31 @@ export class Keyboard {
 
   // --- performance ---------------------------------------------------------
 
+  async performance(row: number, col: number): Promise<perf.Performance> {
+    return perf.parsePerformance(
+      await this.transport.send(perf.getPerformance(row, col)),
+    );
+  }
+
+  /**
+   * Write a key's actuation settings.
+   *
+   * Read-modify-write: `axis`, `calibrate`, `axisV2Id`, `axisRangeMax` and
+   * `axisCoefficient` are calibration constants, so pass through what a prior
+   * read gave you. The firmware also clamps silently (in fixed mode it forces
+   * `release === press`), so the returned record — not what you sent — is the
+   * truth.
+   */
+  async setPerformance(
+    row: number,
+    col: number,
+    p: perf.Performance,
+  ): Promise<perf.Performance> {
+    return perf.parsePerformance(
+      await this.transport.send(perf.setPerformance(row, col, p)),
+    );
+  }
+
   /** One row of live telemetry. Poll at 15-25 Hz for a travel test. */
   async axisData(kind: AxisKind, row: number): Promise<number[]> {
     return perf.parseAxisData(

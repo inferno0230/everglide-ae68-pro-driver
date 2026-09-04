@@ -8,6 +8,7 @@
 import { strict as assert } from "node:assert";
 import { pad64, readU16, u16le, mmToUm } from "./codec";
 import * as layout from "./protocol/layout";
+import * as perf from "./protocol/performance";
 import { decodeCombo, describe as describeKey } from "./keycodes";
 
 let failures = 0;
@@ -80,6 +81,31 @@ check("layout style unpacks packed u16 fields", () => {
 
 check("0xFF marks an unused row", () => {
   assert.deepEqual(layout.parseKeyLayoutStyle(pad64([3, 5, 0xff])), []);
+});
+
+console.log("performance");
+
+check("performance set/parse round-trips", () => {
+  const written: perf.Performance = {
+    mode: 1,
+    press: 1200,
+    release: 800,
+    rtFirst: 300,
+    rtPress: 150,
+    rtRelease: 150,
+    pressDead: 100,
+    releaseDead: 200,
+    axis: 3,
+    calibrate: 1,
+    axisV2Id: 7,
+    axisRangeMax: 4000,
+    axisCoefficient: 1024,
+  };
+  // The reply has the same field layout as the request, so parsing our own
+  // packet back is a real check of both directions.
+  const packet = perf.setPerformance(5, 6, written);
+  assert.deepEqual(perf.parsePerformance(packet), written);
+  assert.deepEqual(Array.from(packet.subarray(0, 4)), [4, 2, 5, 6]);
 });
 
 console.log("keycodes");

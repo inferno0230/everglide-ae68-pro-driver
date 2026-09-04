@@ -2,8 +2,10 @@ import { create } from "zustand";
 import { Transport, HidError } from "@/hid/transport";
 import { Keyboard, type DeviceSnapshot } from "@/hid/keyboard";
 import { createSimulatedDevice } from "@/hid/simulator";
+import type { Performance } from "@/hid/protocol/performance";
 import {
   AxisKind,
+  KeyMode,
   SaveTarget,
   LAYER_COUNT,
 } from "@/hid/protocol/constants";
@@ -35,9 +37,15 @@ interface DeviceState {
   snapshot: DeviceSnapshot | null;
   /** keymap[layer][row][col] */
   keymap: number[][][];
+  performance: Map<string, Performance>;
 
+  selection: Set<string>;
   dirty: Set<DirtyTarget>;
   saving: boolean;
+  busy: boolean;
+
+  /** Keys whose last write came back changed by the firmware. */
+  clamped: Set<string>;
 
   /**
    * How many times each thing has been reconciled with the board.
@@ -57,6 +65,15 @@ interface DeviceState {
   connect: () => Promise<void>;
   connectSimulated: () => Promise<void>;
   disconnect: () => Promise<void>;
+
+  select: (ids: string[], mode?: "replace" | "toggle") => void;
+  selectAll: () => void;
+  clearSelection: () => void;
+
+  writePerformance: (
+    ids: string[],
+    patch: Partial<Performance>,
+  ) => Promise<void>;
 
   save: () => Promise<void>;
   runCalibration: (phase: "start" | "stop") => Promise<void>;
@@ -81,8 +98,12 @@ export const useDevice = create<DeviceState>((set, get) => ({
   simulated: false,
   snapshot: null,
   keymap: [],
+  performance: new Map(),
+  selection: new Set(),
   dirty: new Set(),
   saving: false,
+  busy: false,
+  clamped: new Set(),
   revision: new Map(),
 
   async init() {
@@ -121,11 +142,71 @@ export const useDevice = create<DeviceState>((set, get) => ({
       status: "disconnected",
       snapshot: null,
       keymap: [],
+      performance: new Map(),
+      selection: new Set(),
       dirty: new Set(),
+      clamped: new Set(),
       revision: new Map(),
       simulated: false,
       error: null,
     });
+  },
+
+  select(ids, mode = "replace") {
+    if (mode === "replace") {
+      set({ selection: new Set(ids) });
+      return;
+    }
+    const next = new Set(get().selection);
+    for (const id of ids) {
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+    }
+    set({ selection: next });
+  },
+
+  selectAll() {
+    const keys = get().snapshot?.keys ?? [];
+    set({ selection: new Set(keys.map((k) => keyId(k.row, k.col))) });
+  },
+
+  clearSelection() {
+    set({ selection: new Set() });
+  },
+
+  async writePerformance(ids, patch) {
+    const perf = new Map(get().performance);
+    const clamped = new Set(get().clamped);
+    const answered: string[] = [];
+    set({ busy: true });
+    try {
+      for (const id of ids) {
+        const [row, col] = id.split(":").map(Number);
+        if (row === undefined || col === undefined) continue;
+        const current = perf.get(id);
+        if (!current) continue;
+
+        const wanted = { ...current, ...patch };
+        // The reply is the truth: the firmware clamps silently, and in fixed
+        // mode collapses the reset point onto the actuation point.
+        const stored = await keyboard.setPerformance(row, col, wanted);
+        perf.set(id, stored);
+
+        if (differs(wanted, stored)) clamped.add(id);
+        else clamped.delete(id);
+        answered.push(id);
+      }
+      set({
+        performance: perf,
+        clamped,
+        revision: bumped(get().revision, answered),
+        dirty: withDirty(get().dirty, SaveTarget.Performance),
+      });
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false });
+    }
   },
   async save() {
     if (get().dirty.size === 0) return;
@@ -186,6 +267,34 @@ function withDirty(
   return next;
 }
 
+/**
+ * Did the firmware store something other than what we asked for?
+ *
+ * "Other than what we asked" has to mean *refused*, not merely *different*, or
+ * the signal is worthless. In fixed-actuation mode the board defines the reset
+ * point as the actuation point, so every ordinary change to `press` comes back
+ * with a `release` we did not send. That is the documented contract, not a
+ * rejection, and counting it flagged all 68 keys as firmware-adjusted on a
+ * routine edit — which is how a warning stops being read.
+ */
+function differs(wanted: Performance, stored: Performance): boolean {
+  const fields: Array<keyof Performance> = [
+    "mode",
+    "press",
+    "release",
+    "rtFirst",
+    "rtPress",
+    "rtRelease",
+    "pressDead",
+    "releaseDead",
+  ];
+  return fields.some((f) => {
+    // Derived in fixed mode; only meaningful when rapid trigger owns it.
+    if (f === "release" && stored.mode === KeyMode.Fixed) return false;
+    return wanted[f] !== stored[f];
+  });
+}
+
 async function open(hid: HIDDevice, simulated: boolean): Promise<void> {
   const set = useDevice.setState;
   set({ status: "connecting", error: null, simulated });
@@ -210,9 +319,19 @@ async function reload(): Promise<void> {
     keymap.push(rows);
   }
 
+  const performance = new Map<string, Performance>();
+  for (const key of snapshot.keys) {
+    performance.set(
+      keyId(key.row, key.col),
+      await keyboard.performance(key.row, key.col),
+    );
+  }
+
   set({
     snapshot,
     keymap,
+    performance,
+    clamped: new Set(),
   });
 }
 

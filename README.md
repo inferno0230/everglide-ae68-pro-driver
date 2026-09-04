@@ -11,6 +11,9 @@ account, telemetry, or remote configuration service required.
 
 ## Features
 
+- Configure fixed actuation, rapid trigger, press/reset points, and dead zones
+  per key or across multiple selected keys.
+- View live switch travel for all 68 keys.
 - Run and monitor full-key switch calibration.
 - Inspect firmware, protocol, board, connection, and lighting information.
 - Explore the complete interface with a simulated keyboard.
@@ -49,11 +52,20 @@ synthetic and no HID device is opened.
 1. Connect the keyboard over USB and close any other configurator that may be
    using it. Only one application can hold the HID interface at a time.
 2. Choose the section you want from the sidebar.
+3. Select one or more keys where applicable, then adjust their settings.
+4. Check the value shown after a write. The firmware may clamp unsupported
+   values; the driver displays what the keyboard actually returned.
 5. Select **Save to keyboard** when finished.
 
 Changes take effect immediately but initially live only in the keyboard's RAM.
 They are lost when the keyboard loses power unless **Save to keyboard** writes
 them to flash. Save before unplugging the board or switching profiles.
+
+### Performance
+
+Select keys on the keyboard preview, choose fixed actuation or rapid trigger,
+and adjust the available travel and dead-zone controls. **Live travel** polls
+the switches at 20 Hz and displays their current depth on the keyboard.
 
 ### Calibration
 
@@ -66,6 +78,8 @@ calibration from the sidebar.
 | Area | Status |
 | --- | --- |
 | Device discovery and information | Working |
+| Performance and rapid trigger | Working |
+| Live switch travel | Working |
 | Calibration | Working |
 | Simulated device | Working |
 

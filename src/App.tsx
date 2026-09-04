@@ -4,10 +4,15 @@ import { useDevice } from "@/store/device";
 import { Sidebar, type SectionId } from "@/components/Sidebar";
 import { TooltipProvider, Button, Badge } from "@/components/ui";
 import { Connect } from "@/sections/Connect";
+import { PerformanceSection } from "@/sections/Performance";
 import { CalibrationSection } from "@/sections/Calibration";
 import { DeviceSection } from "@/sections/Device";
 
 const TITLES: Record<SectionId, { title: string; blurb: string }> = {
+  performance: {
+    title: "Performance",
+    blurb: "Actuation point, rapid trigger and dead zones, per key.",
+  },
   calibration: {
     title: "Calibration",
     blurb: "Teach the board the true travel range of every switch.",
@@ -20,7 +25,7 @@ const TITLES: Record<SectionId, { title: string; blurb: string }> = {
 
 export default function App() {
   const { status, init, dirty, disconnect, simulated } = useDevice();
-  const [section, setSection] = React.useState<SectionId>("calibration");
+  const [section, setSection] = React.useState<SectionId>("performance");
 
   React.useEffect(() => {
     void init();
@@ -100,6 +105,8 @@ export default function App() {
 
 function Section({ id }: { id: SectionId }) {
   switch (id) {
+    case "performance":
+      return <PerformanceSection />;
     case "calibration":
       return <CalibrationSection />;
     case "device":

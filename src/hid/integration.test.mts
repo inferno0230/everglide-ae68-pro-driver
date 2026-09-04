@@ -87,6 +87,47 @@ await check("space is addressable at its electrical column, not its x", async ()
   assert.equal(map[6], 44, "column 6 holds the Space keycode");
 });
 
+console.log("performance");
+
+await check("reads a key's actuation record", async () => {
+  const p = await keyboard.performance(3, 1);
+  assert.equal(p.press, 1200);
+  assert.equal(p.axisRangeMax, 4000);
+});
+
+await check("write returns the firmware's clamped value, not ours", async () => {
+  const before = await keyboard.performance(3, 1);
+  // Fixed mode: ask for a reset point different from the actuation point.
+  const sent = { ...before, mode: 0 as const, press: 1500, release: 900 };
+  const got = await keyboard.setPerformance(3, 1, sent);
+  assert.equal(got.press, 1500);
+  assert.equal(
+    got.release,
+    1500,
+    "fixed mode collapses release onto press — the reply is the truth",
+  );
+});
+
+await check("rapid trigger keeps an independent reset point", async () => {
+  const before = await keyboard.performance(3, 2);
+  const got = await keyboard.setPerformance(3, 2, {
+    ...before,
+    mode: 1,
+    press: 1000,
+    release: 700,
+  });
+  assert.equal(got.mode, 1);
+  assert.equal(got.release, 700);
+});
+
+await check("calibration constants survive a write", async () => {
+  const before = await keyboard.performance(3, 3);
+  const got = await keyboard.setPerformance(3, 3, { ...before, press: 800 });
+  assert.equal(got.axisV2Id, before.axisV2Id);
+  assert.equal(got.axisRangeMax, before.axisRangeMax);
+  assert.equal(got.axisCoefficient, before.axisCoefficient);
+});
+
 console.log("telemetry");
 
 await check("axis polling returns one reading per column", async () => {

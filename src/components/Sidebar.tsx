@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 /** What each flash region is called in the interface. */
 const TARGET_NAMES: Partial<Record<DirtyTarget, string>> = {
+  [SaveTarget.Performance]: "actuation",
   [SaveTarget.Calibration]: "calibration",
 };
 
@@ -20,6 +21,7 @@ const describeTargets = (dirty: ReadonlySet<DirtyTarget>): string =>
   [...dirty].map((t) => TARGET_NAMES[t] ?? "settings").join(", ");
 
 export type SectionId =
+  | "performance"
   | "calibration"
   | "device";
 
@@ -32,6 +34,7 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
+  { id: "performance", label: "Performance", icon: Gauge },
   { id: "calibration", label: "Calibration", icon: Crosshair },
   { id: "device", label: "Device", icon: Cpu },
 ];
