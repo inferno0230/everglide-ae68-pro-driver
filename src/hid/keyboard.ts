@@ -10,6 +10,7 @@ import * as codec from "./codec";
 import {
   AxisKind,
   Category,
+  LAYER_COUNT,
   PROFILE_COUNT,
   SaveTarget,
 } from "./protocol/constants";
@@ -137,6 +138,26 @@ export class Keyboard {
     return layout.parseKeyLayout(
       await this.transport.send(layout.getKeyLayout(layer, row)),
     );
+  }
+
+  async setKeycode(
+    layer: number,
+    row: number,
+    col: number,
+    keycode: number,
+  ): Promise<void> {
+    await this.transport.send(layout.setKeyCode(layer, row, col, keycode));
+  }
+
+  /** Read every layer of every populated row. */
+  async allKeymaps(rows: readonly number[]): Promise<number[][][]> {
+    const layers: number[][][] = [];
+    for (let layer = 0; layer < LAYER_COUNT; layer++) {
+      const byRow: number[][] = [];
+      for (const row of rows) byRow[row] = await this.keymap(layer, row);
+      layers.push(byRow);
+    }
+    return layers;
   }
 
   // --- performance ---------------------------------------------------------

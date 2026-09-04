@@ -5,6 +5,7 @@ import { Sidebar, type SectionId } from "@/components/Sidebar";
 import { TooltipProvider, Button, Badge } from "@/components/ui";
 import { Connect } from "@/sections/Connect";
 import { PerformanceSection } from "@/sections/Performance";
+import { KeymapSection } from "@/sections/Keymap";
 import { CalibrationSection } from "@/sections/Calibration";
 import { DeviceSection } from "@/sections/Device";
 
@@ -12,6 +13,10 @@ const TITLES: Record<SectionId, { title: string; blurb: string }> = {
   performance: {
     title: "Performance",
     blurb: "Actuation point, rapid trigger and dead zones, per key.",
+  },
+  keymap: {
+    title: "Keymap",
+    blurb: "What each key sends, across four layers.",
   },
   calibration: {
     title: "Calibration",
@@ -107,6 +112,8 @@ function Section({ id }: { id: SectionId }) {
   switch (id) {
     case "performance":
       return <PerformanceSection />;
+    case "keymap":
+      return <KeymapSection />;
     case "calibration":
       return <CalibrationSection />;
     case "device":

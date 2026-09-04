@@ -13,6 +13,7 @@ import {
   AxisKind,
   SaveTarget,
 } from "./protocol/constants";
+import { describe as describeKey } from "./keycodes";
 
 let failures = 0;
 async function check(name: string, fn: () => Promise<void> | void) {
@@ -85,6 +86,27 @@ await check("space is addressable at its electrical column, not its x", async ()
   assert.equal(space?.col, 6, "space is electrical column 6");
   const map = await keyboard.keymap(0, 5);
   assert.equal(map[6], 44, "column 6 holds the Space keycode");
+});
+
+console.log("keymap");
+
+await check("layer 0 reads back real keycodes", async () => {
+  const row = await keyboard.keymap(0, 3);
+  assert.equal(describeKey(row[1] ?? 0), "A");
+  assert.equal(describeKey(row[12] ?? 0), "Enter");
+});
+
+await check("writing a keycode round-trips", async () => {
+  await keyboard.setKeycode(0, 3, 1, 0x1808); // Win+E on the A key
+  const row = await keyboard.keymap(0, 3);
+  assert.equal(row[1], 0x1808);
+  assert.equal(describeKey(row[1] ?? 0), "Win+E");
+  await keyboard.setKeycode(0, 3, 1, 4); // put A back
+});
+
+await check("Fn1 layer carries its own mapping", async () => {
+  const row = await keyboard.keymap(1, 1);
+  assert.equal(describeKey(row[1] ?? 0), "F1");
 });
 
 console.log("performance");

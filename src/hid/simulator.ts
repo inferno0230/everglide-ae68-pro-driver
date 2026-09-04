@@ -375,6 +375,21 @@ export class SimulatedKeyboard {
         arr.forEach((kc, i) => put16(4 + i * 2, kc));
         return reply;
       }
+      case 3: {
+        // GetKeyCode
+        const [, , layer = 0, r = 0, col = 0] = req;
+        reply.set([layer, r, col], 2);
+        put16(5, this.keymap[layer]?.[r]?.[col] ?? 0);
+        return reply;
+      }
+      case 4: {
+        // SetKeyCode
+        const [, , layer = 0, r = 0, col = 0] = req;
+        const kc = (req[5] ?? 0) | ((req[6] ?? 0) << 8);
+        const rowArr = this.keymap[layer]?.[r];
+        if (rowArr) rowArr[col] = kc;
+        return reply;
+      }
       default:
         return reply;
     }

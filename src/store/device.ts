@@ -40,6 +40,7 @@ interface DeviceState {
   performance: Map<string, Performance>;
 
   selection: Set<string>;
+  layer: number;
   dirty: Set<DirtyTarget>;
   saving: boolean;
   busy: boolean;
@@ -69,11 +70,13 @@ interface DeviceState {
   select: (ids: string[], mode?: "replace" | "toggle") => void;
   selectAll: () => void;
   clearSelection: () => void;
+  setLayer: (layer: number) => void;
 
   writePerformance: (
     ids: string[],
     patch: Partial<Performance>,
   ) => Promise<void>;
+  writeKeycode: (row: number, col: number, keycode: number) => Promise<void>;
 
   save: () => Promise<void>;
   runCalibration: (phase: "start" | "stop") => Promise<void>;
@@ -100,6 +103,7 @@ export const useDevice = create<DeviceState>((set, get) => ({
   keymap: [],
   performance: new Map(),
   selection: new Set(),
+  layer: 0,
   dirty: new Set(),
   saving: false,
   busy: false,
@@ -174,6 +178,10 @@ export const useDevice = create<DeviceState>((set, get) => ({
     set({ selection: new Set() });
   },
 
+  setLayer(layer) {
+    set({ layer });
+  },
+
   async writePerformance(ids, patch) {
     const perf = new Map(get().performance);
     const clamped = new Set(get().clamped);
@@ -202,6 +210,23 @@ export const useDevice = create<DeviceState>((set, get) => ({
         revision: bumped(get().revision, answered),
         dirty: withDirty(get().dirty, SaveTarget.Performance),
       });
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false });
+    }
+  },
+
+  async writeKeycode(row, col, keycode) {
+    const { layer } = get();
+    set({ busy: true });
+    try {
+      await keyboard.setKeycode(layer, row, col, keycode);
+      const fresh = await keyboard.keymap(layer, row);
+      const keymap = get().keymap.map((l) => l.map((r) => [...r]));
+      const layerRows = keymap[layer];
+      if (layerRows) layerRows[row] = fresh;
+      set({ keymap, dirty: withDirty(get().dirty, SaveTarget.Layout) });
     } catch (err) {
       set({ error: message(err) });
     } finally {

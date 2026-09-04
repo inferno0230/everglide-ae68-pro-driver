@@ -14,6 +14,8 @@ account, telemetry, or remote configuration service required.
 - Configure fixed actuation, rapid trigger, press/reset points, and dead zones
   per key or across multiple selected keys.
 - View live switch travel for all 68 keys.
+- Remap four layers: Main, Fn1, Fn2, and Fn3.
+- Assign keyboard, media, mouse, control, lighting, and gamepad keycodes.
 - Run and monitor full-key switch calibration.
 - Inspect firmware, protocol, board, connection, and lighting information.
 - Explore the complete interface with a simulated keyboard.
@@ -67,6 +69,13 @@ Select keys on the keyboard preview, choose fixed actuation or rapid trigger,
 and adjust the available travel and dead-zone controls. **Live travel** polls
 the switches at 20 Hz and displays their current depth on the keyboard.
 
+### Keymap
+
+Choose a layer, select a key, and assign its new action. Available assignments
+are grouped into keyboard, media, mouse, control, lighting, and gamepad
+categories. Keyboard assignments are further arranged as letters, numbers,
+symbols, function keys, and extra keys.
+
 ### Calibration
 
 Start calibration, press every key fully down, and allow each key to return
@@ -80,6 +89,7 @@ calibration from the sidebar.
 | Device discovery and information | Working |
 | Performance and rapid trigger | Working |
 | Live switch travel | Working |
+| Four-layer keymap | Working |
 | Calibration | Working |
 | Simulated device | Working |
 
