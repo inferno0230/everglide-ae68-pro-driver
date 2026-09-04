@@ -64,7 +64,17 @@ export function Connect() {
 
           <p className="mt-3 text-3xs leading-relaxed text-fg-subtle">
             Only one app can hold the keyboard at a time. If the vendor
-            configurator is open, close it first.
+            configurator is open, close it first. If you're on Linux and the
+            keyboard appears but won't connect,{" "}
+            <a
+              href="https://github.com/inferno0230/everglide-ae68-pro-driver#linux-permissions"
+              target="_blank"
+              rel="noreferrer"
+              className="text-fg-muted underline underline-offset-2 hover:text-fg"
+            >
+              fix device permissions
+            </a>
+            .
           </p>
         </Panel>
 

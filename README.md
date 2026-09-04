@@ -148,12 +148,58 @@ layout, and interface are intentionally specific to the Everglide AE68 Pro.
 
 ## Troubleshooting
 
-**The keyboard does not appear in the picker**
+**The keyboard does not appear in the picker or cannot connect**
 
 - Confirm that it is connected by USB.
 - Use Chrome or Edge on desktop.
 - Close the vendor configurator and other copies of this driver.
 - Reload the page, reconnect the cable, and try **Choose keyboard** again.
+
+### Linux permissions
+
+On Linux, the keyboard may appear in the browser's picker and remain paired,
+but the driver can still fail to open it when the current user cannot access
+its vendor `hidraw` interface. First find the keyboard's vendor and product IDs
+in the `vvvv:pppp` column printed by `lsusb`, then match them to its `hidraw`
+nodes:
+
+```bash
+lsusb
+
+for device in /dev/hidraw*; do
+  echo "$device"
+  udevadm info --query=property --name="$device" \
+    | grep -E '^(ID_MODEL|ID_VENDOR_ID|ID_MODEL_ID|ID_USB_INTERFACE_NUM)='
+done
+```
+
+A matching `lsusb` line looks like this:
+
+```text
+Bus 003 Device 003: ID abcd:1234 Keyboard Manufacturer Keyboard Name
+```
+
+In that example, `VVVV` is `abcd` and `PPPP` is `1234`. If you cannot tell
+which line belongs to the keyboard, run `lsusb` once with it unplugged and
+again after reconnecting it; the new line contains the IDs to use. The
+`ID_VENDOR_ID` and `ID_MODEL_ID` values from the matching `hidraw` entry should
+show the same two IDs.
+
+If the keyboard's nodes are owned by `root:root` with mode `0600`, install a
+udev rule that grants the active desktop user access. Replace `VVVV` and `PPPP`
+below with the lowercase vendor and product IDs reported for your keyboard:
+
+```bash
+printf '%s\n' \
+'SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="VVVV", ATTRS{idProduct}=="PPPP", TAG+="uaccess"' \
+| sudo tee /etc/udev/rules.d/70-everglide-ae68-pro.rules
+
+sudo udevadm control --reload-rules
+```
+
+Unplug and reconnect the keyboard, then reload the page and choose it again.
+You can confirm the result with `getfacl /dev/hidrawN`, replacing `N` with one
+of the keyboard's node numbers; your user should have `rw-` access.
 
 **Changes work but disappear after unplugging**
 
