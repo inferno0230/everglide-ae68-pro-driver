@@ -8,6 +8,7 @@ import { PerformanceSection } from "@/sections/Performance";
 import { KeymapSection } from "@/sections/Keymap";
 import { LightingSection } from "@/sections/Lighting";
 import { AdvancedSection } from "@/sections/Advanced";
+import { MacrosSection } from "@/sections/Macros";
 import { CalibrationSection } from "@/sections/Calibration";
 import { DeviceSection } from "@/sections/Device";
 
@@ -28,7 +29,10 @@ const TITLES: Record<SectionId, { title: string; blurb: string }> = {
     title: "Advanced keys",
     blurb: "Behaviours layered on top of a key: DKS, multi-point, tap/hold, SOCD.",
   },
-  macros: { title: "Macros", blurb: "" },
+  macros: {
+    title: "Macros",
+    blurb: "Record a sequence of keystrokes, then bind it to a key.",
+  },
   calibration: {
     title: "Calibration",
     blurb: "Teach the board the true travel range of every switch.",
@@ -109,7 +113,7 @@ export default function App() {
                 slider beside it. Cap the measure the way GitHub does.
               */}
               <div className="w-full px-6 py-5">
-                <Section id={section} />
+                <Section id={section} onSection={setSection} />
               </div>
             </>
           )}
@@ -119,7 +123,13 @@ export default function App() {
   );
 }
 
-function Section({ id }: { id: SectionId }) {
+function Section({
+  id,
+  onSection,
+}: {
+  id: SectionId;
+  onSection: (id: SectionId) => void;
+}) {
   switch (id) {
     case "performance":
       return <PerformanceSection />;
@@ -129,6 +139,8 @@ function Section({ id }: { id: SectionId }) {
       return <LightingSection />;
     case "advanced":
       return <AdvancedSection />;
+    case "macros":
+      return <MacrosSection onOpenKeymap={() => onSection("keymap")} />;
     case "calibration":
       return <CalibrationSection />;
     case "device":

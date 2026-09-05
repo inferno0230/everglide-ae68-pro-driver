@@ -110,9 +110,17 @@ export const parseRtPrecision = (r: Uint8Array): number => (r[3] ?? 10) / 1000;
 export const getMacroSpace = () =>
   pad64([Category.Global, Sub.MacroSpaceQuery, 0]);
 
+/**
+ * `[3]` slot count, `[4:6]` total **actions** the board can hold.
+ *
+ * Not bytes, despite the obvious reading: the AE68 Pro answers 16 and 960, and
+ * 16 slots x 60 actions is exactly 960 — verified by filling every slot. The
+ * figure is a fixed capability, not a remaining count; it still reads 960 with
+ * macros resident, so a caller that wants free space sums `actionCount` itself.
+ */
 export function parseMacroSpace(r: Uint8Array): {
   slots: number;
-  totalBytes: number;
+  totalActions: number;
 } {
-  return { slots: r[3] ?? 0, totalBytes: readU16(r, 4) };
+  return { slots: r[3] ?? 0, totalActions: readU16(r, 4) };
 }

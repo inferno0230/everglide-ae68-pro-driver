@@ -3,6 +3,7 @@ import { Transport, HidError } from "@/hid/transport";
 import { Keyboard, type DeviceSnapshot } from "@/hid/keyboard";
 import { createSimulatedDevice } from "@/hid/simulator";
 import type { Performance } from "@/hid/protocol/performance";
+import type { MacroAction, MacroMode } from "@/hid/protocol/macro";
 import type { LightingBase, PaletteSlot, Rgb } from "@/hid/protocol/lighting";
 import type {
   HigherKeyConfig,
@@ -13,6 +14,8 @@ import {
   AxisKind,
   HigherKeyMode,
   KeyMode,
+  MACRO_ACTION_POOL,
+  MACRO_ACTIONS_PER_PAGE,
   SaveTarget,
   LAYER_COUNT,
 } from "@/hid/protocol/constants";
@@ -64,6 +67,13 @@ interface DeviceState {
    */
   higher: Map<string, HigherKeyRecord>;
 
+  /** All 16 macro slots, always present; an unused slot has `actionCount` 0. */
+  macros: MacroMode[];
+  /** Actions per slot, only for slots that hold any. */
+  macroActions: Map<number, MacroAction[]>;
+  /** Total actions the board can hold across every slot. */
+  macroCapacity: number;
+
   selection: Set<string>;
   layer: number;
   dirty: Set<DirtyTarget>;
@@ -106,6 +116,17 @@ interface DeviceState {
   writePalette: (area: number, slots: PaletteSlot[]) => Promise<void>;
   writeHigherKey: (key: KeyRef, config: HigherKeyConfig) => Promise<void>;
   clearHigherKeys: (keys: readonly KeyRef[]) => Promise<void>;
+  /**
+   * Write one macro slot. Resolves to null when the board refused the write
+   * because the shared action pool is full.
+   */
+  writeMacro: (
+    macroId: number,
+    actions: readonly MacroAction[],
+    options?: { repeatCount?: number; mode?: number },
+  ) => Promise<MacroMode | null>;
+  clearMacro: (macroId: number) => Promise<void>;
+
   /** Pin LEDs in an area to a colour, or hand them back to its effect. */
   paintLights: (
     area: number,
@@ -145,6 +166,9 @@ export const useDevice = create<DeviceState>((set, get) => ({
   palette: {},
   lightColors: {},
   higher: new Map(),
+  macros: [],
+  macroActions: new Map(),
+  macroCapacity: MACRO_ACTION_POOL,
   selection: new Set(),
   layer: 0,
   dirty: new Set(),
@@ -194,6 +218,8 @@ export const useDevice = create<DeviceState>((set, get) => ({
       palette: {},
       lightColors: {},
       higher: new Map(),
+      macros: [],
+      macroActions: new Map(),
       selection: new Set(),
       dirty: new Set(),
       clamped: new Set(),
@@ -306,6 +332,82 @@ export const useDevice = create<DeviceState>((set, get) => ({
       set({
         palette: { ...get().palette, [area]: slots },
         dirty: withDirty(get().dirty, SaveTarget.Lighting),
+      });
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false });
+    }
+  },
+
+  /**
+   * Write one macro slot.
+   *
+   * The board holds one 960-action pool across all 16 slots and refuses an
+   * over-budget write *silently* — no error, the slot simply keeps what it had.
+   * So the driver's reply is the truth here as everywhere else: a returned
+   * record that does not carry the action count we sent means refused, and the
+   * caller gets null rather than a cache that quietly disagrees with the board.
+   */
+  async writeMacro(macroId, actions, options = {}) {
+    set({ busy: true });
+    try {
+      const stored = await keyboard.setMacro(macroId, actions, options);
+      const refused = stored.actionCount !== actions.length;
+
+      const macros = get().macros.map((m) =>
+        m.macroId === macroId ? stored : m,
+      );
+      const macroActions = new Map(get().macroActions);
+      if (refused) {
+        set({ macros });
+        return null;
+      }
+      if (actions.length === 0) macroActions.delete(macroId);
+      else macroActions.set(macroId, [...actions]);
+
+      set({
+        macros,
+        macroActions,
+        revision: bumped(get().revision, [`macro:${macroId}`]),
+        dirty: withDirty(get().dirty, SaveTarget.Macro),
+      });
+      return stored;
+    } catch (err) {
+      set({ error: message(err) });
+      return null;
+    } finally {
+      set({ busy: false });
+    }
+  },
+
+  /**
+   * Empty a slot and hand its actions back to the pool.
+   *
+   * The pages are zeroed as well as the mode record. A stale page left behind
+   * is invisible while `actionCount` is 0, but it reappears the moment the slot
+   * is reused with a longer macro than the write that follows.
+   */
+  async clearMacro(macroId) {
+    const held = get().macroActions.get(macroId)?.length ?? 0;
+    set({ busy: true });
+    try {
+      await keyboard.clearMacro(
+        macroId,
+        Math.max(1, Math.ceil(held / MACRO_ACTIONS_PER_PAGE)),
+      );
+      const macros = get().macros.map((m) =>
+        m.macroId === macroId
+          ? { ...m, valid: false, actionCount: 0, repeatCount: 0, mode: 0 }
+          : m,
+      );
+      const macroActions = new Map(get().macroActions);
+      macroActions.delete(macroId);
+      set({
+        macros,
+        macroActions,
+        revision: bumped(get().revision, [`macro:${macroId}`]),
+        dirty: withDirty(get().dirty, SaveTarget.Macro),
       });
     } catch (err) {
       set({ error: message(err) });
@@ -696,6 +798,16 @@ async function reload(): Promise<void> {
     }
   }
 
+  // 16 mode records, then the pages of whichever slots actually hold a macro.
+  // There is no bulk query, and an empty slot has no pages worth reading.
+  const macros = await keyboard.allMacros();
+  const macroActions = new Map<number, MacroAction[]>();
+  for (const record of macros) {
+    if (record.actionCount === 0) continue;
+    macroActions.set(record.macroId, (await keyboard.macro(record.macroId)).actions);
+  }
+  const space = await keyboard.macroSpace();
+
   set({
     snapshot,
     keymap,
@@ -704,6 +816,9 @@ async function reload(): Promise<void> {
     palette,
     lightColors,
     higher,
+    macros,
+    macroActions,
+    macroCapacity: space.totalActions || MACRO_ACTION_POOL,
     clamped: new Set(),
   });
 }

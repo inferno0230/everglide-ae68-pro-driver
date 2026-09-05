@@ -474,7 +474,7 @@ export class Keyboard {
 
   // --- macros (unverified on hardware) -------------------------------------
 
-  async macroSpace(): Promise<{ slots: number; totalBytes: number }> {
+  async macroSpace(): Promise<{ slots: number; totalActions: number }> {
     return glob.parseMacroSpace(
       await this.transport.send(glob.getMacroSpace()),
     );
@@ -508,14 +508,20 @@ export class Keyboard {
   }
 
   /**
-   * Write a mac. The mode record carries the action count, so it must land
-   * before the pages that follow it.
+   * Write a macro, and answer with what the board actually kept.
+   *
+   * The mode record carries the action count, so it must land before the pages
+   * that follow it. It is also the write the firmware refuses when the shared
+   * 960-action pool is exhausted — silently, with no error reply — so the mode
+   * record is read back before the pages go out. A refused write leaves the
+   * slot as it was, and sending pages after it would scribble action data into
+   * a slot whose declared length never changed.
    */
   async setMacro(
     macroId: number,
     actions: readonly mac.MacroAction[],
     options: { repeatCount?: number; mode?: number } = {},
-  ): Promise<void> {
+  ): Promise<mac.MacroMode> {
     await this.transport.send(
       mac.setMacroMode({
         macroId,
@@ -525,6 +531,11 @@ export class Keyboard {
         mode: options.mode ?? 0,
       }),
     );
+    const stored = mac.parseMacroMode(
+      await this.transport.send(mac.getMacroMode(macroId), { matchBytes: 3 }),
+    );
+    if (stored.actionCount !== actions.length) return stored;
+
     const pages = mac.pageActions(actions);
     for (let page = 0; page < pages.length; page++) {
       await this.transport.send(
@@ -532,6 +543,23 @@ export class Keyboard {
         PAGED,
       );
     }
+    return stored;
+  }
+
+  /** Zero a slot's pages and clear its mode record, freeing its pool share. */
+  async clearMacro(macroId: number, pages: number): Promise<void> {
+    for (let page = 0; page < pages; page++) {
+      await this.transport.send(mac.setMacroData(macroId, page, []), PAGED);
+    }
+    await this.transport.send(
+      mac.setMacroMode({
+        macroId,
+        valid: false,
+        actionCount: 0,
+        repeatCount: 0,
+        mode: 0,
+      }),
+    );
   }
 
   // --- profiles, calibration, save -----------------------------------------

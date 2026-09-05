@@ -23,6 +23,7 @@ const TARGET_NAMES: Partial<Record<DirtyTarget, string>> = {
   [SaveTarget.Layout]: "keymap",
   [SaveTarget.Calibration]: "calibration",
   [SaveTarget.HigherKey]: "advanced keys",
+  [SaveTarget.Macro]: "macros",
 };
 
 const describeTargets = (dirty: ReadonlySet<DirtyTarget>): string =>
@@ -50,7 +51,7 @@ const NAV: NavItem[] = [
   { id: "keymap", label: "Keymap", icon: KeyboardIcon },
   { id: "lighting", label: "Lighting", icon: Lightbulb },
   { id: "advanced", label: "Advanced keys", icon: Layers },
-  { id: "macros", label: "Macros", icon: ListOrdered, pending: true },
+  { id: "macros", label: "Macros", icon: ListOrdered },
   { id: "calibration", label: "Calibration", icon: Crosshair },
   { id: "device", label: "Device", icon: Cpu },
 ];

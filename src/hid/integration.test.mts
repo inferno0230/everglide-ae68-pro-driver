@@ -388,6 +388,57 @@ await check("save targets are accepted", async () => {
   await keyboard.save(SaveTarget.All);
 });
 
+console.log("macros");
+
+await check("the board reports 16 slots and a 960-action pool", async () => {
+  const space = await keyboard.macroSpace();
+  assert.equal(space.slots, 16);
+  assert.equal(space.totalActions, 960);
+});
+
+await check("a multi-page macro round-trips", async () => {
+  const actions = Array.from({ length: 20 }, (_, i) => ({
+    down: i % 2 === 0,
+    delay: i + 1,
+    keycode: 4 + i,
+  }));
+  const stored = await keyboard.setMacro(0, actions, { repeatCount: 3, mode: 2 });
+  assert.equal(stored.actionCount, 20);
+
+  const read = await keyboard.macro(0);
+  assert.equal(read.mode.repeatCount, 3);
+  assert.equal(read.mode.mode, 2);
+  assert.deepEqual(read.actions, actions);
+});
+
+await check("an over-budget macro is refused silently", async () => {
+  // Slot 0 already holds 20, so 960 more cannot fit. The board answers with
+  // the record it kept, not an error, and the pages must not then be written.
+  const tooMany = Array.from({ length: 960 }, () => ({
+    down: true,
+    delay: 1,
+    keycode: 4,
+  }));
+  const stored = await keyboard.setMacro(1, tooMany);
+  assert.notEqual(stored.actionCount, 960);
+  assert.equal(stored.actionCount, 0);
+});
+
+await check("clearing a slot frees its share of the pool", async () => {
+  await keyboard.clearMacro(0, 2);
+  assert.equal((await keyboard.macro(0)).mode.actionCount, 0);
+
+  // With slot 0 empty a full-pool macro now fits.
+  const full = Array.from({ length: 960 }, () => ({
+    down: true,
+    delay: 1,
+    keycode: 4,
+  }));
+  const stored = await keyboard.setMacro(1, full);
+  assert.equal(stored.actionCount, 960);
+  await keyboard.clearMacro(1, 64);
+});
+
 console.log("advanced keys");
 
 // PgUp and PgDn — the two keys with nothing bound to them on this board.

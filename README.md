@@ -20,6 +20,7 @@ account, telemetry, or remote configuration service required.
 - Assign keyboard, media, mouse, control, lighting, and gamepad keycodes.
 - Configure DKS, MPT, tap-or-hold (MT), Toggle, End Trigger, SOCD, and
   Rappy-Snappy.
+- Record, edit and bind macros across sixteen slots.
 - Run and monitor full-key switch calibration.
 - Control keyboard and bottom-lighting effects, brightness, speed, direction,
   and palette.
@@ -102,6 +103,27 @@ Select a key and configure DKS, MPT, tap-or-hold (MT), Toggle, End Trigger,
 SOCD, or Rappy-Snappy. Pair-based modes update both involved keys together.
 Review the draft and confirm it before saving the result to flash.
 
+### Macros
+
+The board keeps sixteen macro slots that share **one pool of 960 actions**. A
+press and its release are separate actions, so a macro that types `ab` costs
+four. One macro may take the whole pool if the others are empty.
+
+Select a slot, then **Record** and type. Presses, releases and the gaps between
+them are all captured; **Fixed delay** replaces the measured timings with a
+single value. Actions can be reordered, edited, inserted and deleted by hand
+afterwards.
+
+Edits stay in the page until **Write to keyboard**, which is deliberate: a macro
+is a whole document, and committing every keystroke would put a full rewrite on
+the wire for each one. Writing puts it in the board's RAM; **Save to keyboard**
+in the sidebar is still what commits it to flash.
+
+Bind a finished macro to a key from the **Keymap** section, under the Macro
+group. If the pool is full the keyboard refuses the write without reporting an
+error, so the driver checks what the board stored and tells you when a macro did
+not fit.
+
 ### Calibration
 
 Start calibration, press every key fully down, and allow each key to return
@@ -129,6 +151,7 @@ keyboard does not provide a 125 Hz mode.
 | Keyboard and bottom RGB | Working |
 | Per-key/per-LED colour | Working |
 | Advanced key behaviours | Working |
+| Macros | Working |
 | Calibration | Working |
 | Profiles and profile names | Working |
 | Report-rate changes and automatic reconnect | Working |
@@ -136,12 +159,8 @@ keyboard does not provide a 125 Hz mode.
 
 ## TODO / not supported yet
 
-- [ ] Build the macro editor. The 16-slot macro protocol is implemented and
-  tested in the driver, but there is no interface for it yet.
 - [ ] Add profile backup and restore to a local file.
-- [ ] Add automated browser/UI tests in addition to protocol integration tests.
-- [ ] Add a release/deployment workflow.
-- [ ] Firmware update and recovery are intentionally unavailable. An incorrect
+- [ ] Firmware update and recovery are unavailable. An incorrect
   firmware write can brick the keyboard, so this will remain unsupported until
   a safe and independently verified process exists.
 

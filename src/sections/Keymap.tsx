@@ -32,6 +32,7 @@ const LAYERS = [
 const GROUPS: KeycodeGroup[] = [
   "basic",
   "special",
+  "macro",
   "media",
   "mouse",
   "control",

@@ -12,7 +12,11 @@
  */
 
 import { REPORT_SIZE } from "./codec";
-import { Category } from "./protocol/constants";
+import {
+  Category,
+  MACRO_ACTION_POOL,
+  MACRO_SLOTS,
+} from "./protocol/constants";
 
 /** The per-key colour buffer's shape. See .codex/reverse/PROTOCOL.md section 8. */
 const KEYS_PER_PAGE = 15;
@@ -176,6 +180,9 @@ export class SimulatedKeyboard {
    * a field on its way back out.
    */
   private higherKeys = new Map<string, Uint8Array>();
+  /** Per slot: the mode record's six payload bytes, and its action pages. */
+  private macroModes = new Map<number, Uint8Array>();
+  private macroPages = new Map<string, Uint8Array>();
 
   /**
    * Individually pinned colour, per area, indexed the way the board does: the
@@ -314,6 +321,8 @@ export class SimulatedKeyboard {
         return this.light(req, reply);
       case Category.HigherKey:
         return this.higher(req, reply);
+      case Category.Macro:
+        return this.macro(req, reply);
       default:
         return reply;
     }
@@ -412,9 +421,9 @@ export class SimulatedKeyboard {
       case 12: // rapid-trigger precision, 0.01mm
         reply[3] = 10;
         return reply;
-      case 14: // macro space
-        reply[3] = 16;
-        put16(4, 2048);
+      case 14: // macro space — 16 slots sharing a 960-action pool
+        reply[3] = MACRO_SLOTS;
+        put16(4, MACRO_ACTION_POOL);
         return reply;
       default:
         return reply;
@@ -436,6 +445,52 @@ export class SimulatedKeyboard {
     const stored = this.higherKeys.get(id);
     if (stored) reply.set(stored, 4);
     return reply;
+  }
+
+  /**
+   * Category 7. Slots share one 960-action pool, and an over-budget mode
+   * record is *silently* dropped — no error, the slot simply keeps its old
+   * value. That refusal is the whole reason a caller must read the record
+   * back, so the simulator reproduces it rather than accepting everything.
+   */
+  private macro(req: Uint8Array, reply: Uint8Array): Uint8Array {
+    const id = req[2] ?? 0;
+    switch (req[1]) {
+      case 2: {
+        // SetMacroMode
+        const wanted = (req[4] ?? 0) | ((req[5] ?? 0) << 8);
+        let used = 0;
+        for (const [slot, rec] of this.macroModes) {
+          if (slot !== id) used += (rec[1] ?? 0) | ((rec[2] ?? 0) << 8);
+        }
+        if (used + wanted <= MACRO_ACTION_POOL) {
+          this.macroModes.set(id, req.slice(3, 9));
+        }
+        reply[2] = id;
+        reply.set(this.macroModes.get(id) ?? new Uint8Array(6), 3);
+        return reply;
+      }
+      case 4: {
+        // SetMacroData
+        this.macroPages.set(`${id}:${req[3] ?? 0}`, req.slice(4, REPORT_SIZE));
+        reply.set(req.subarray(0, REPORT_SIZE));
+        return reply;
+      }
+      case 3: {
+        // GetMacroData
+        reply[2] = id;
+        reply[3] = req[3] ?? 0;
+        const page = this.macroPages.get(`${id}:${req[3] ?? 0}`);
+        if (page) reply.set(page, 4);
+        return reply;
+      }
+      default: {
+        // GetMacroMode
+        reply[2] = id;
+        reply.set(this.macroModes.get(id) ?? new Uint8Array(6), 3);
+        return reply;
+      }
+    }
   }
 
   private layout(

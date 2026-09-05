@@ -12,7 +12,8 @@ import * as perf from "./protocol/performance";
 import * as adv from "./protocol/higherkey";
 import * as mac from "./protocol/macro";
 import { HigherKeyMode, SocdMode } from "./protocol/constants";
-import { decodeCombo, describe as describeKey, macroKeycode } from "./keycodes";
+import { decodeCombo, describe as describeKey, lookup, macroKeycode } from "./keycodes";
+import { CODE_TO_KEYCODE } from "./browserKeys";
 
 let failures = 0;
 function check(name: string, fn: () => void): void {
@@ -227,6 +228,68 @@ check("combo keycodes decode to modifiers plus a base key", () => {
   assert.deepEqual(decodeCombo(0x1808), { modifiers: 8, base: 0x08 });
   assert.equal(describeKey(0x1808), "Win+E");
   assert.equal(describeKey(0x1329), "Ctrl+Shift+Esc");
+});
+
+check("the pool is counted in actions across every slot", () => {
+  // 16 slots x 60 actions is exactly the 960 the board reports, which is what
+  // proves the figure counts actions rather than bytes.
+  const modes = Array.from({ length: 16 }, (_, macroId) => ({
+    macroId,
+    valid: true,
+    actionCount: 60,
+    repeatCount: 1,
+    mode: 0,
+  }));
+  assert.equal(mac.poolUsed(modes), mac.MAX_ACTIONS_PER_MACRO);
+});
+
+check("a cleared slot stops consuming the pool", () => {
+  const modes = [
+    { macroId: 0, valid: true, actionCount: 100, repeatCount: 1, mode: 0 },
+    { macroId: 1, valid: false, actionCount: 0, repeatCount: 0, mode: 0 },
+  ];
+  assert.equal(mac.poolUsed(modes), 100);
+});
+
+check("one macro may claim the whole pool", () => {
+  // 960 actions is 64 pages; the old code capped a macro at a single page.
+  const actions = Array.from({ length: mac.MAX_ACTIONS_PER_MACRO }, () => ({
+    down: true,
+    delay: 1,
+    keycode: 4,
+  }));
+  assert.equal(mac.pageActions(actions).length, 64);
+});
+
+check("every recordable browser code maps to a catalogued key", () => {
+  // The vendor's newer build silently mapped Win/Menu/Pause/PageUp/PageDown to
+  // codes the board does not know. This is the assertion that would have
+  // caught it.
+  const orphans = Object.entries(CODE_TO_KEYCODE).filter(
+    ([, keycode]) => lookup(keycode)?.group !== "basic",
+  );
+  assert.deepEqual(orphans, []);
+});
+
+check("left and right modifiers stay distinct", () => {
+  const pairs: Array<[string, string]> = [
+    ["ControlLeft", "ControlRight"],
+    ["ShiftLeft", "ShiftRight"],
+    ["AltLeft", "AltRight"],
+    ["MetaLeft", "MetaRight"],
+  ];
+  for (const [left, right] of pairs) {
+    assert.notEqual(CODE_TO_KEYCODE[left], CODE_TO_KEYCODE[right]);
+  }
+});
+
+check("no two browser codes claim the same keycode", () => {
+  const seen = new Map<number, string>();
+  for (const [code, keycode] of Object.entries(CODE_TO_KEYCODE)) {
+    const prior = seen.get(keycode);
+    assert.equal(prior, undefined, `${code} collides with ${prior}`);
+    seen.set(keycode, code);
+  }
 });
 
 check("macro keycodes sit at 0xF500 + id", () => {

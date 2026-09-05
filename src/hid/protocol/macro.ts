@@ -2,14 +2,18 @@
  * Category 7 — Macro. See .codex/reverse/PROTOCOL.md section 10.
  *
  * Verified against an AE68 Pro: mode record and action pages written, read
- * back, and decoded exactly.
+ * back, and decoded exactly, including multi-page macros across a power cycle.
  *
  * 16 slots. A macro is bound to a key by giving that key keycode
  * `0xF500 + macroId` (see keycodes.ts).
  */
 
 import { pad64, readU16, readU32, u16le, u32le } from "../codec";
-import { Category, MACRO_ACTIONS_PER_PAGE } from "./constants";
+import {
+  Category,
+  MACRO_ACTION_POOL,
+  MACRO_ACTIONS_PER_PAGE,
+} from "./constants";
 
 const Sub = {
   GetMode: 1,
@@ -22,16 +26,34 @@ const Sub = {
 export const MAX_DELAY_MS = 32767;
 
 /**
- * The board reports 960 bytes of macro storage across 16 slots (02 0E 00), so
- * each slot holds exactly 60 bytes: one page, fifteen actions. A macro longer
- * than this has nowhere to go on this hardware.
+ * One macro may use the whole pool, so the per-macro cap *is* the pool.
+ *
+ * The board reports 16 slots and 960 in `02 0E 00`, and 960 counts **actions,
+ * not bytes** — 16 slots x 60 actions is exactly 960, and filling all sixteen
+ * that way is accepted to the last action. Measured on an AE68 Pro:
+ *
+ *   - a single slot takes 960 and refuses 961;
+ *   - once one slot holds 960, a *one*-action macro elsewhere is refused;
+ *   - 100-action macros in three slots survived save + power cycle intact.
+ *
+ * The refusal is silent. The board does not answer with an error, it simply
+ * does not store the mode record, so the read-back is the only way to know a
+ * write landed — hence `setMacro` returning what the board kept.
  */
-export const MAX_ACTIONS_PER_MACRO = MACRO_ACTIONS_PER_PAGE;
+export const MAX_ACTIONS_PER_MACRO = MACRO_ACTION_POOL;
 
 export interface MacroAction {
   /** true = key down, false = key up. */
   down: boolean;
-  /** Milliseconds to wait before this action. */
+  /**
+   * Milliseconds attached to this action, 0-32767.
+   *
+   * The vendor's recorder writes the measured gap between two events onto the
+   * *earlier* of them and gives the newest action a 10 ms placeholder, so in
+   * vendor-authored macros this reads as "wait after this action". Match that
+   * convention and playback lines up with the vendor's own macros; the field's
+   * width is the only part the firmware pins down.
+   */
   delay: number;
   keycode: number;
 }
@@ -72,6 +94,18 @@ export function parseMacroMode(r: Uint8Array): MacroMode {
     mode: r[8] ?? 0,
   };
 }
+
+/**
+ * Actions already claimed across every slot.
+ *
+ * The board's own capacity report is a fixed number, not a remaining count, so
+ * free space is only knowable by adding up what the slots hold. Slots are
+ * summed whatever their `valid` flag says: clearing a slot means zeroing its
+ * action count, and treating a stale count as free is how you earn a silent
+ * refusal.
+ */
+export const poolUsed = (modes: readonly MacroMode[]): number =>
+  modes.reduce((n, m) => n + m.actionCount, 0);
 
 // --- action pages ----------------------------------------------------------
 

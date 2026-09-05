@@ -195,3 +195,8 @@ export const LAYER_COUNT = 4;
 export const MACRO_SLOTS = 16;
 /** (64 - 4) / 4 — action words that fit in one macro page. */
 export const MACRO_ACTIONS_PER_PAGE = 15;
+/**
+ * Actions the board can hold across *all* macro slots, as reported by
+ * `02 0E 00`. One pool, not a per-slot allowance — see `macro.ts`.
+ */
+export const MACRO_ACTION_POOL = 960;
